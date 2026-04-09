@@ -13,9 +13,7 @@ individual test files never import factories directly.
 import pytest
 from django.test import RequestFactory as DjangoRequestFactory
 from rest_framework.test import APIClient
-
 from tests.factories import AdminUserFactory, OwnerUserFactory, PlayerUserFactory
-
 
 # ---------------------------------------------------------------------------
 # Database

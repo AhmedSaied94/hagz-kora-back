@@ -4,13 +4,12 @@ All services run in Docker. Secrets come from environment variables.
 """
 
 import sentry_sdk
+from decouple import config
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
-from decouple import config
-
-from .base import *  # noqa: F401, F403
+from .base import *
 
 DEBUG = False
 
@@ -31,13 +30,13 @@ X_FRAME_OPTIONS = "DENY"
 # Static files — WhiteNoise
 # ---------------------------------------------------------------------------
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-MIDDLEWARE = ["whitenoise.middleware.WhiteNoiseMiddleware"] + MIDDLEWARE  # noqa: F405
+MIDDLEWARE = ["whitenoise.middleware.WhiteNoiseMiddleware", *MIDDLEWARE]
 
 # ---------------------------------------------------------------------------
 # Media files — S3
 # ---------------------------------------------------------------------------
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/" if AWS_S3_CUSTOM_DOMAIN else f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"  # noqa: F405
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/" if AWS_S3_CUSTOM_DOMAIN else f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
 
 # ---------------------------------------------------------------------------
 # Email (production via SMTP)

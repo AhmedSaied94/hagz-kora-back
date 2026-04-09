@@ -11,8 +11,8 @@ These classes exist for cases where class-based organisation genuinely helps
 """
 
 from django.test import TestCase
-from rest_framework.test import APITestCase
 from rest_framework import status
+from rest_framework.test import APITestCase
 
 
 class BaseTestCase(TestCase):

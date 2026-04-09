@@ -3,17 +3,17 @@ Local development settings.
 Django runs natively; DB, Redis, Celery run in Docker via port-forwarded localhost.
 """
 
-from .base import *  # noqa: F401, F403
+from .base import *
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]  # noqa: S104
 
 # ---------------------------------------------------------------------------
 # Django Debug Toolbar
 # ---------------------------------------------------------------------------
-INSTALLED_APPS = INSTALLED_APPS + ["debug_toolbar"]  # noqa: F405
-MIDDLEWARE = ["debug_toolbar.middleware.DebugToolbarMiddleware"] + MIDDLEWARE  # noqa: F405
+INSTALLED_APPS = [*INSTALLED_APPS, "debug_toolbar"]
+MIDDLEWARE = ["debug_toolbar.middleware.DebugToolbarMiddleware", *MIDDLEWARE]
 
 INTERNAL_IPS = ["127.0.0.1"]
 

@@ -8,8 +8,8 @@ Each phase adds factories for its own models at the bottom of this file.
 """
 
 import factory
-from factory.django import DjangoModelFactory
 from django.contrib.auth import get_user_model
+from factory.django import DjangoModelFactory
 
 User = get_user_model()
 
