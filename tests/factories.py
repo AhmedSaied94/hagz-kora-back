@@ -20,6 +20,7 @@ User = get_user_model()
 #  fields exist on the custom User model from the start.)
 # ---------------------------------------------------------------------------
 
+
 class BaseUserFactory(DjangoModelFactory):
     class Meta:
         model = User

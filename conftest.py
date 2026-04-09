@@ -19,6 +19,7 @@ from tests.factories import AdminUserFactory, OwnerUserFactory, PlayerUserFactor
 # Database
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def django_db_setup():
     """
@@ -30,6 +31,7 @@ def django_db_setup():
 # ---------------------------------------------------------------------------
 # HTTP clients
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def api_client():
@@ -46,6 +48,7 @@ def request_factory():
 # ---------------------------------------------------------------------------
 # Users
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def player(db):
@@ -68,6 +71,7 @@ def admin_user(db):
 # ---------------------------------------------------------------------------
 # Authenticated clients
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def player_client(player):
