@@ -24,7 +24,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "config/settings/*.py" = ["F403", "F405"]  # star imports in settings
-"*/migrations/*.py" = ["E501"]             # long lines in auto-generated migrations
+"*/migrations/*.py" = ["E501", "RUF012"]   # long lines and mutable class attrs in auto-generated migrations
 "*/tests/*.py" = ["S101", "S106"]
 
 [tool.ruff.lint.isort]
