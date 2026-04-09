@@ -1,0 +1,21 @@
+FROM python:3.12-slim-bookworm
+
+# System deps for PostGIS / Celery / Pillow
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    binutils \
+    gdal-bin \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so
+
+WORKDIR /app
+
+COPY requirements/local.txt requirements/local.txt
+RUN pip install --no-cache-dir -r requirements/local.txt
+
+COPY . .

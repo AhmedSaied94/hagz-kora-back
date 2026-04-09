@@ -1,0 +1,13 @@
+-r base.txt
+
+# WSGI server
+gunicorn==23.0.0
+
+# Security
+django-csp==3.8
+
+# Static files
+whitenoise[brotli]==6.8.2
+
+# Monitoring / error tracking
+sentry-sdk[django]==2.19.2
