@@ -39,4 +39,7 @@ def health_check(request):
         healthy = False
 
     status_code = 200 if healthy else 503
-    return Response({"status": "ok" if healthy else "degraded", "checks": checks}, status=status_code)
+    return Response(
+        {"status": "ok" if healthy else "degraded", "checks": checks},
+        status=status_code,
+    )

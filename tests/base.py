@@ -71,7 +71,9 @@ class BaseAPITestCase(APITestCase):
     def assert_field_error(self, response, field):
         """Assert that ``field`` appears in the validation error response."""
         self.assert_bad_request(response)
-        self.assertIn(field, response.data, f"Expected error on field '{field}', got: {response.data}")
+        self.assertIn(
+            field, response.data, f"Expected error on field '{field}', got: {response.data}"
+        )
 
     def assert_paginated(self, response, *, count=None):
         """Assert the response is a paginated list and optionally check total count."""
