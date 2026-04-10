@@ -8,7 +8,7 @@ Egyptian football pitch booking platform. Django 5 REST API consumed by the Flut
 
 | Layer | Tech |
 |-------|------|
-| Framework | Django 5.1 + Django REST Framework 3.15 |
+| Framework | Django 5.2 + Django REST Framework 3.15 |
 | Database | PostgreSQL 16 + PostGIS (spatial search) |
 | Cache / broker | Redis 7 |
 | Async tasks | Celery 5 + django-celery-beat |
@@ -345,3 +345,45 @@ docker compose -f docker-compose.prod.yml exec app python manage.py collectstati
 ```
 
 CI pipeline (GitHub Actions): lint → test → build Docker image (on `main` only).
+
+---
+
+## Starting a new phase
+
+Before implementing any new phase, always branch off the latest `main`:
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b phase/<phase-name>
+```
+
+Never implement a new phase on `main` directly or on a stale branch.
+
+---
+
+## Django implementation standards
+
+Every Django implementation must follow the relevant Claude skill commands:
+
+| Skill | When to use |
+|-------|-------------|
+| `/django-patterns` | Architecture, REST API design, ORM, caching, signals, middleware |
+| `/django-tdd` | Writing tests first with pytest-django, factory_boy, and coverage |
+| `/django-security` | Auth, authorization, CSRF, SQL injection, XSS, secure deployment |
+| `/django-verification` | Before any PR or release — migrations, lint, tests, security scan |
+
+Run the appropriate skill **before** writing implementation code, not after.
+
+---
+
+## Pre-push checklist
+
+**Always run `/review-pr` before pushing.** Do not push without it.
+
+```bash
+# In Claude Code, before git push:
+/review-pr
+```
+
+This triggers a full blast-radius review of your changes. Address any CRITICAL or HIGH issues before pushing.
