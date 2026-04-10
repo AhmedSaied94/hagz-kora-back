@@ -21,9 +21,7 @@ User = get_user_model()
 
 
 # ---------------------------------------------------------------------------
-# Phase 0 — User factories
-# (Full User model is implemented in Phase 1; these stubs use whatever
-#  fields exist on the custom User model from the start.)
+# Phase 1 — User + Profile factories
 # ---------------------------------------------------------------------------
 
 

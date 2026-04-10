@@ -26,6 +26,7 @@ ignore = [
 "config/settings/*.py" = ["F403", "F405"]  # star imports in settings
 "*/migrations/*.py" = ["E501", "RUF012"]   # long lines and mutable class attrs in auto-generated migrations
 "*/tests/*.py" = ["S101", "S106"]
+"tests/**/*.py" = ["S101", "S106"]
 
 [tool.ruff.lint.isort]
 known-third-party = ["django", "rest_framework", "rest_framework_simplejwt"]

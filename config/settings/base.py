@@ -45,6 +45,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    "apps.core",
     "apps.auth_users",
     "apps.stadiums",
     "apps.bookings",
@@ -129,7 +130,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # ---------------------------------------------------------------------------
 # Internationalization
 # ---------------------------------------------------------------------------
-LANGUAGE_CODE = "ar"
+LANGUAGE_CODE = "en"
 TIME_ZONE = "Africa/Cairo"
 USE_I18N = True
 USE_TZ = True
