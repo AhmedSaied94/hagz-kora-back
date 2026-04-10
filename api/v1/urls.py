@@ -16,4 +16,5 @@ urlpatterns = [
     path("reviews/", include("api.v1.reviews.urls")),
     path("notifications/", include("api.v1.notifications.urls")),
     path("devices/", include("api.v1.notifications.device_urls")),
+    path("", include("apps.pitches.urls")),
 ]
