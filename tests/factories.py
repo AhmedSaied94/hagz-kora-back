@@ -7,10 +7,21 @@ and any test module can import them from one place.
 Each phase adds factories for its own models at the bottom of this file.
 """
 
+import datetime
+
 import factory
 from apps.auth_users.models import OwnerProfile, PlayerProfile
 from apps.notifications.models import DeviceToken
+from apps.stadiums.models import (
+    OperatingHour,
+    Slot,
+    SlotStatus,
+    Stadium,
+    StadiumPhoto,
+    StadiumStatus,
+)
 from django.contrib.auth import get_user_model
+from django.contrib.gis.geos import Point
 from factory.django import DjangoModelFactory
 
 User = get_user_model()
@@ -82,3 +93,67 @@ class DeviceTokenFactory(DjangoModelFactory):
     token = factory.Sequence(lambda n: f"fcm-token-{n:06d}")
     platform = DeviceToken.Platform.ANDROID
     is_active = True
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — Stadium factories
+# ---------------------------------------------------------------------------
+
+
+class StadiumFactory(DjangoModelFactory):
+    class Meta:
+        model = Stadium
+
+    owner = factory.SubFactory(OwnerUserFactory)
+    name_ar = factory.Sequence(lambda n: f"ملعب {n}")
+    name_en = factory.Sequence(lambda n: f"Stadium {n}")
+    description_ar = factory.Faker("sentence")
+    sport_type = "5v5"
+    location = factory.LazyFunction(lambda: Point(31.2357, 30.0444, srid=4326))
+    address_ar = factory.Faker("address")
+    city = "Cairo"
+    price_per_slot = factory.Faker("pydecimal", left_digits=3, right_digits=2, positive=True)
+    slot_duration_minutes = 60
+    phone = factory.Sequence(lambda n: f"+2010{n:08d}")
+    amenities = factory.LazyFunction(list)
+    status = StadiumStatus.DRAFT
+
+    class Params:
+        active = factory.Trait(status=StadiumStatus.ACTIVE)
+        pending = factory.Trait(status=StadiumStatus.PENDING_REVIEW)
+
+
+class StadiumPhotoFactory(DjangoModelFactory):
+    class Meta:
+        model = StadiumPhoto
+
+    stadium = factory.SubFactory(StadiumFactory)
+    image = factory.django.ImageField(filename="test_photo.jpg", width=800, height=600)
+    thumbnail_url = ""
+    medium_url = ""
+    order = factory.Sequence(lambda n: n)
+    is_cover = False
+
+
+class OperatingHourFactory(DjangoModelFactory):
+    class Meta:
+        model = OperatingHour
+        django_get_or_create = ("stadium", "day_of_week")
+
+    stadium = factory.SubFactory(StadiumFactory)
+    day_of_week = 0  # Monday
+    open_time = datetime.time(8, 0)
+    close_time = datetime.time(22, 0)
+    is_closed = False
+
+
+class SlotFactory(DjangoModelFactory):
+    class Meta:
+        model = Slot
+        django_get_or_create = ("stadium", "date", "start_time")
+
+    stadium = factory.SubFactory(StadiumFactory, active=True)
+    date = factory.LazyFunction(datetime.date.today)
+    start_time = datetime.time(10, 0)
+    end_time = datetime.time(11, 0)
+    status = SlotStatus.AVAILABLE

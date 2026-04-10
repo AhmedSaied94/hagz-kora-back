@@ -8,7 +8,7 @@ Egyptian football pitch booking platform. Django 5 REST API consumed by the Flut
 
 | Layer | Tech |
 |-------|------|
-| Framework | Django 5.1 + Django REST Framework 3.15 |
+| Framework | Django 5.2 + Django REST Framework 3.15 |
 | Database | PostgreSQL 16 + PostGIS (spatial search) |
 | Cache / broker | Redis 7 |
 | Async tasks | Celery 5 + django-celery-beat |
@@ -345,3 +345,79 @@ docker compose -f docker-compose.prod.yml exec app python manage.py collectstati
 ```
 
 CI pipeline (GitHub Actions): lint → test → build Docker image (on `main` only).
+
+---
+
+## Starting a new phase
+
+Before implementing any new phase, always branch off the latest `main`:
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b phase/<phase-name>
+```
+
+Never implement a new phase on `main` directly or on a stale branch.
+
+---
+
+## Service layer
+
+Introduce `apps/<app>/services.py` when **any** of these conditions are true:
+
+- An operation has **more than one caller** (e.g. a view *and* a Celery task, or a view *and* a webhook handler). Keeping business logic in the view forces duplication or awkward imports.
+- An operation involves **multi-step mutations across models** that must succeed or fail together — the logic belongs in a service function wrapped in `transaction.atomic()`, not scattered across a view method.
+- The operation needs to be **tested independently of HTTP** — service functions can be called directly in unit tests without spinning up a request/response cycle.
+
+**Structure:**
+
+```python
+# apps/slots/services.py
+
+from django.db import transaction
+from apps.stadiums.models import Slot, SlotStatus
+
+def block_slot(stadium_id: int, slot_id: int) -> Slot:
+    with transaction.atomic():
+        slot = Slot.objects.select_for_update().get(pk=slot_id, stadium_id=stadium_id)
+        if slot.status == SlotStatus.BOOKED:
+            raise ValueError("Cannot block a booked slot.")
+        if slot.status == SlotStatus.BLOCKED:
+            raise ValueError("Slot is already blocked.")
+        slot.status = SlotStatus.BLOCKED
+        slot.save(update_fields=["status", "updated_at"])
+    return slot
+```
+
+The view becomes a thin HTTP adapter — validate input, call the service, map exceptions to HTTP status codes.
+
+**Do NOT create a service layer** just to avoid writing code in a view. If an operation has a single caller and fits in ~20 lines, keep it in the view or model method.
+
+---
+
+## Django implementation standards
+
+Every Django implementation must follow the relevant Claude skill commands:
+
+| Skill | When to use |
+|-------|-------------|
+| `/django-patterns` | Architecture, REST API design, ORM, caching, signals, middleware |
+| `/django-tdd` | Writing tests first with pytest-django, factory_boy, and coverage |
+| `/django-security` | Auth, authorization, CSRF, SQL injection, XSS, secure deployment |
+| `/django-verification` | Before any PR or release — migrations, lint, tests, security scan |
+
+Run the appropriate skill **before** writing implementation code, not after.
+
+---
+
+## Pre-push checklist
+
+**Always run `/review-pr` before pushing.** Do not push without it.
+
+```bash
+# In Claude Code, before git push:
+/review-pr
+```
+
+This triggers a full blast-radius review of your changes. Address any CRITICAL or HIGH issues before pushing.
