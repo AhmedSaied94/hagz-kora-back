@@ -13,19 +13,18 @@ individual test files never import factories directly.
 import pytest
 from django.test import RequestFactory as DjangoRequestFactory
 from rest_framework.test import APIClient
-from tests.factories import AdminUserFactory, OwnerUserFactory, PlayerUserFactory
+from tests.factories import (
+    AdminUserFactory,
+    DeviceTokenFactory,
+    OwnerProfileFactory,
+    OwnerUserFactory,
+    PlayerProfileFactory,
+    PlayerUserFactory,
+)
 
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture(scope="session")
-def django_db_setup():
-    """
-    Use the default test database defined in settings.
-    Override here if you need a separate test schema.
-    """
 
 
 # ---------------------------------------------------------------------------
@@ -95,3 +94,32 @@ def admin_client(admin_user):
     client = APIClient()
     client.force_authenticate(user=admin_user)
     return client
+
+
+# ---------------------------------------------------------------------------
+# Profiles
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def player_profile(player):
+    """PlayerProfile for the player fixture."""
+    return PlayerProfileFactory(user=player)
+
+
+@pytest.fixture
+def owner_profile(owner):
+    """OwnerProfile for the owner fixture."""
+    return OwnerProfileFactory(user=owner)
+
+
+@pytest.fixture
+def kyc_approved_owner(db):
+    """An owner whose KYC has been approved."""
+    return OwnerUserFactory(kyc_approved=True)
+
+
+@pytest.fixture
+def device_token(player):
+    """A DeviceToken associated with the player fixture."""
+    return DeviceTokenFactory(user=player)

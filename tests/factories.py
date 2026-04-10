@@ -8,6 +8,8 @@ Each phase adds factories for its own models at the bottom of this file.
 """
 
 import factory
+from apps.auth_users.models import OwnerProfile, PlayerProfile
+from apps.notifications.models import DeviceToken
 from django.contrib.auth import get_user_model
 from factory.django import DjangoModelFactory
 
@@ -15,9 +17,7 @@ User = get_user_model()
 
 
 # ---------------------------------------------------------------------------
-# Phase 0 — User factories
-# (Full User model is implemented in Phase 1; these stubs use whatever
-#  fields exist on the custom User model from the start.)
+# Phase 1 — User + Profile factories
 # ---------------------------------------------------------------------------
 
 
@@ -49,3 +49,36 @@ class AdminUserFactory(BaseUserFactory):
     role = "admin"
     is_staff = True
     is_superuser = True
+
+
+class PlayerProfileFactory(DjangoModelFactory):
+    class Meta:
+        model = PlayerProfile
+        django_get_or_create = ("user",)
+
+    user = factory.SubFactory(PlayerUserFactory)
+    city = factory.Faker("city")
+    bio = factory.Faker("sentence")
+
+
+class OwnerProfileFactory(DjangoModelFactory):
+    class Meta:
+        model = OwnerProfile
+        django_get_or_create = ("user",)
+
+    user = factory.SubFactory(OwnerUserFactory)
+    business_name_ar = factory.Faker("company")
+    business_name_en = factory.Faker("company")
+    national_id_number = factory.Sequence(lambda n: f"2900{n:09d}")
+    city = factory.Faker("city")
+
+
+class DeviceTokenFactory(DjangoModelFactory):
+    class Meta:
+        model = DeviceToken
+        django_get_or_create = ("token",)
+
+    user = factory.SubFactory(PlayerUserFactory)
+    token = factory.Sequence(lambda n: f"fcm-token-{n:06d}")
+    platform = DeviceToken.Platform.ANDROID
+    is_active = True
