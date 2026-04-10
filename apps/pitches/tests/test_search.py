@@ -86,8 +86,9 @@ class TestPitchSearch:
         """Test basic pitch list endpoint."""
         response = api_client.get("/api/v1/pitches/")
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 3  # Only active pitches
-        assert response.data[0]["is_active"] is True
+        results = response.data["results"]
+        assert len(results) == 3  # Only active pitches
+        assert results[0]["is_active"] is True
 
     def test_search_by_surface_type(self, api_client, sample_pitches):
         """Test filtering by surface type."""
