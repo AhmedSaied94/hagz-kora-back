@@ -3,9 +3,9 @@ Integration tests for operating hours GET/PUT endpoint.
 """
 
 import pytest
+from tests.factories import OperatingHourFactory, StadiumFactory
 
 from apps.stadiums.models import OperatingHour
-from tests.factories import OperatingHourFactory, StadiumFactory
 
 
 @pytest.mark.integration

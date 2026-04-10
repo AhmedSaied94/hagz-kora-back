@@ -12,7 +12,14 @@ import datetime
 import factory
 from apps.auth_users.models import OwnerProfile, PlayerProfile
 from apps.notifications.models import DeviceToken
-from apps.stadiums.models import OperatingHour, Slot, SlotStatus, Stadium, StadiumPhoto, StadiumStatus
+from apps.stadiums.models import (
+    OperatingHour,
+    Slot,
+    SlotStatus,
+    Stadium,
+    StadiumPhoto,
+    StadiumStatus,
+)
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import Point
 from factory.django import DjangoModelFactory

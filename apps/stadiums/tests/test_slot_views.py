@@ -3,9 +3,9 @@ Integration tests for slot block/unblock endpoints.
 """
 
 import pytest
+from tests.factories import SlotFactory, StadiumFactory
 
 from apps.stadiums.models import SlotStatus
-from tests.factories import SlotFactory, StadiumFactory
 
 
 @pytest.mark.integration

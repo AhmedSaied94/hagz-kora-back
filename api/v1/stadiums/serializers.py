@@ -13,10 +13,13 @@ Sections:
 
 from __future__ import annotations
 
+from apps.stadiums.models import (
+    OperatingHour,
+    Slot,
+    Stadium,
+    StadiumPhoto,
+)
 from rest_framework import serializers
-
-from apps.stadiums.models import OperatingHour, Slot, SlotStatus, Stadium, StadiumPhoto, StadiumStatus
-
 
 # ---------------------------------------------------------------------------
 # Photo
@@ -48,9 +51,9 @@ class StadiumPhotoUploadSerializer(serializers.ModelSerializer):
 
     # Magic-byte signatures for allowed image types (do NOT trust client Content-Type)
     _ALLOWED_MAGIC = (
-        b"\xff\xd8\xff",         # JPEG
-        b"\x89PNG\r\n\x1a\n",   # PNG
-        b"RIFF",                 # WebP (RIFF....WEBP)
+        b"\xff\xd8\xff",  # JPEG
+        b"\x89PNG\r\n\x1a\n",  # PNG
+        b"RIFF",  # WebP (RIFF....WEBP)
     )
 
     def validate_image(self, image):
@@ -109,9 +112,13 @@ class OperatingHourSerializer(serializers.ModelSerializer):
 
         if not is_closed:
             if not open_time:
-                raise serializers.ValidationError({"open_time": "Required when the stadium is open."})
+                raise serializers.ValidationError(
+                    {"open_time": "Required when the stadium is open."}
+                )
             if not close_time:
-                raise serializers.ValidationError({"close_time": "Required when the stadium is open."})
+                raise serializers.ValidationError(
+                    {"close_time": "Required when the stadium is open."}
+                )
             if open_time >= close_time:
                 raise serializers.ValidationError(
                     {"close_time": "close_time must be later than open_time."}

@@ -6,7 +6,11 @@ Mounted at /api/v1/admin/stadiums/ via api/v1/urls.py.
 
 from django.urls import path
 
-from api.v1.stadiums.views import AdminApproveStadiumView, AdminPendingStadiumListView, AdminRejectStadiumView
+from api.v1.stadiums.views import (
+    AdminApproveStadiumView,
+    AdminPendingStadiumListView,
+    AdminRejectStadiumView,
+)
 
 urlpatterns = [
     path("pending/", AdminPendingStadiumListView.as_view(), name="admin-stadiums-pending"),

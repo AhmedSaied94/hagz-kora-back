@@ -3,9 +3,9 @@ Unit tests for Stadium model business logic.
 """
 
 import pytest
+from tests.factories import StadiumFactory
 
 from apps.stadiums.models import StadiumStatus
-from tests.factories import StadiumFactory
 
 
 @pytest.mark.unit

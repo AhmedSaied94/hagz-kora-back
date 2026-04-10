@@ -3,9 +3,9 @@ Integration tests for admin stadium approval workflow.
 """
 
 import pytest
+from tests.factories import StadiumFactory
 
 from apps.stadiums.models import StadiumStatus
-from tests.factories import StadiumFactory
 
 
 @pytest.mark.integration

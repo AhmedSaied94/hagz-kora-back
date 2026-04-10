@@ -13,9 +13,10 @@ import logging
 import posixpath
 from datetime import date, datetime, timedelta
 
-from celery import shared_task
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ def generate_slots_for_all_stadiums(self):
     slots for today through today + SLOT_GENERATION_HORIZON_DAYS.
     Already-existing slots are skipped (idempotent via get_or_create).
     """
-    from apps.stadiums.models import OperatingHour, Slot, Stadium, StadiumStatus
+    from apps.stadiums.models import Stadium, StadiumStatus
 
     try:
         active_stadiums = list(
@@ -60,7 +61,7 @@ def generate_slots_for_all_stadiums(self):
 
     except Exception as exc:
         logger.exception("Slot generation failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -80,24 +81,23 @@ def generate_slots_for_stadium(self, stadium_id: int):
         today = date.today()
         horizon = today + timedelta(days=SLOT_GENERATION_HORIZON_DAYS)
         created = _generate_slots_for_stadium(stadium, today, horizon)
-        logger.info("Slot generation for stadium %d complete. Created %d slots.", stadium_id, created)
+        logger.info(
+            "Slot generation for stadium %d complete. Created %d slots.", stadium_id, created
+        )
         return {"created": created}
     except Stadium.DoesNotExist:
         logger.warning("Stadium %d not found or not active — skipping slot generation.", stadium_id)
         return {"created": 0}
     except Exception as exc:
         logger.exception("Slot generation failed for stadium %d: %s", stadium_id, exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 def _generate_slots_for_stadium(stadium, start_date: date, end_date: date) -> int:
     """Generate slots for a single stadium between start_date and end_date (exclusive)."""
-    from apps.stadiums.models import OperatingHour, Slot
+    from apps.stadiums.models import OperatingHour
 
-    hours_by_day = {
-        oh.day_of_week: oh
-        for oh in stadium.operating_hours.all()
-    }
+    hours_by_day = {oh.day_of_week: oh for oh in stadium.operating_hours.all()}
 
     created_count = 0
     current = start_date
@@ -147,7 +147,7 @@ def _create_slots_for_day(stadium, slot_date: date, oh) -> int:
 @shared_task(bind=True, max_retries=3, default_retry_delay=30)
 def process_stadium_photo(self, photo_id: int):
     """
-    Generate thumbnail (400×300) and medium (800×600) variants for a stadium photo.
+    Generate thumbnail (400x300) and medium (800x600) variants for a stadium photo.
     Stores variants using the configured file storage backend and writes the
     absolute URLs back to StadiumPhoto.thumbnail_url / medium_url.
     """
@@ -170,7 +170,9 @@ def process_stadium_photo(self, photo_id: int):
             if img.width * img.height > MAX_PIXELS:
                 logger.warning(
                     "Photo %d exceeds max pixel count (%dx%d) — skipping processing.",
-                    photo_id, img.width, img.height,
+                    photo_id,
+                    img.width,
+                    img.height,
                 )
                 return None
             img.load()
@@ -191,7 +193,7 @@ def process_stadium_photo(self, photo_id: int):
         return None
     except Exception as exc:
         logger.exception("Photo processing failed for photo %d: %s", photo_id, exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 def _save_variant(original_image, photo, variant_name: str, size: tuple[int, int]) -> str:

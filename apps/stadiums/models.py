@@ -96,13 +96,11 @@ class StadiumPhoto(TimeStampedModel):
     Photo attached to a stadium.
 
     The original file is stored via Django's file storage (S3 in prod, local in dev).
-    Celery generates thumbnail (400×300) and medium (800×600) variants and stores
+    Celery generates thumbnail (400x300) and medium (800x600) variants and stores
     their URLs in thumbnail_url / medium_url.
     """
 
-    stadium = models.ForeignKey(
-        Stadium, on_delete=models.CASCADE, related_name="photos"
-    )
+    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name="photos")
     image = models.ImageField(upload_to="stadiums/photos/original/")
     thumbnail_url = models.URLField(max_length=2000, blank=True)
     medium_url = models.URLField(max_length=2000, blank=True)
@@ -124,11 +122,9 @@ class OperatingHour(TimeStampedModel):
     day_of_week follows Python's weekday(): 0=Monday … 6=Sunday.
     """
 
-    stadium = models.ForeignKey(
-        Stadium, on_delete=models.CASCADE, related_name="operating_hours"
-    )
+    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name="operating_hours")
     day_of_week = models.SmallIntegerField(
-        choices=[(i, d) for i, d in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])]
+        choices=list(enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]))
     )
     open_time = models.TimeField(null=True, blank=True)
     close_time = models.TimeField(null=True, blank=True)
@@ -151,9 +147,7 @@ class Slot(TimeStampedModel):
     Generated daily by Celery Beat for the next 60 days.
     """
 
-    stadium = models.ForeignKey(
-        Stadium, on_delete=models.CASCADE, related_name="slots"
-    )
+    stadium = models.ForeignKey(Stadium, on_delete=models.CASCADE, related_name="slots")
     date = models.DateField(db_index=True)
     start_time = models.TimeField()
     end_time = models.TimeField()
@@ -171,4 +165,4 @@ class Slot(TimeStampedModel):
         ordering = ["date", "start_time"]
 
     def __str__(self) -> str:
-        return f"{self.stadium} | {self.date} {self.start_time}–{self.end_time}"
+        return f"{self.stadium} | {self.date} {self.start_time}-{self.end_time}"

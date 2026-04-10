@@ -5,10 +5,10 @@ Unit tests for Celery tasks.
 import datetime
 
 import pytest
+from tests.factories import OperatingHourFactory, StadiumFactory
 
-from apps.stadiums.models import Slot, SlotStatus, StadiumStatus
+from apps.stadiums.models import Slot, StadiumStatus
 from apps.stadiums.tasks import _create_slots_for_day, _generate_slots_for_stadium
-from tests.factories import OperatingHourFactory, SlotFactory, StadiumFactory
 
 
 @pytest.mark.integration

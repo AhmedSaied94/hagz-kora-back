@@ -18,6 +18,15 @@ Sections:
 
 from __future__ import annotations
 
+from apps.auth_users.permissions import IsAdmin, IsOwner
+from apps.stadiums.models import (
+    OperatingHour,
+    Slot,
+    SlotStatus,
+    Stadium,
+    StadiumPhoto,
+    StadiumStatus,
+)
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets
@@ -39,9 +48,6 @@ from api.v1.stadiums.serializers import (
     StadiumPhotoUploadSerializer,
     StadiumSerializer,
 )
-from apps.auth_users.permissions import IsAdmin, IsOwner
-from apps.stadiums.models import OperatingHour, Slot, SlotStatus, Stadium, StadiumPhoto, StadiumStatus
-
 
 # ---------------------------------------------------------------------------
 # Owner — Stadium CRUD
@@ -63,9 +69,8 @@ class StadiumViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_queryset(self):
-        return (
-            Stadium.objects.filter(owner=self.request.user)
-            .prefetch_related("photos", "operating_hours")
+        return Stadium.objects.filter(owner=self.request.user).prefetch_related(
+            "photos", "operating_hours"
         )
 
     def get_serializer_class(self):
@@ -155,10 +160,9 @@ class OperatingHoursView(APIView):
 
         with transaction.atomic():
             stadium.operating_hours.all().delete()
-            OperatingHour.objects.bulk_create([
-                OperatingHour(stadium=stadium, **item)
-                for item in serializer.validated_data
-            ])
+            OperatingHour.objects.bulk_create(
+                [OperatingHour(stadium=stadium, **item) for item in serializer.validated_data]
+            )
 
         hours = stadium.operating_hours.all()
         return Response(OperatingHourSerializer(hours, many=True).data)
@@ -208,6 +212,7 @@ class StadiumPhotoViewSet(viewsets.ViewSet):
 
         # Kick off async variant generation
         from apps.stadiums.tasks import process_stadium_photo
+
         process_stadium_photo.delay(photo.pk)
 
         out = StadiumPhotoSerializer(photo, context={"request": request})
@@ -261,7 +266,8 @@ class ReorderPhotosView(APIView):
                 StadiumPhoto.objects.filter(pk=photo_id, stadium=stadium).update(order=order)
 
         photos = stadium.photos.all()
-        return Response(StadiumPhotoSerializer(photos, many=True, context={"request": request}).data)
+        serializer = StadiumPhotoSerializer(photos, many=True, context={"request": request})
+        return Response(serializer.data)
 
 
 # ---------------------------------------------------------------------------
@@ -278,9 +284,7 @@ class BlockSlotView(APIView):
         stadium = get_object_or_404(Stadium, pk=stadium_id, owner=request.user)
 
         with transaction.atomic():
-            slot = get_object_or_404(
-                Slot.objects.select_for_update(), pk=slot_id, stadium=stadium
-            )
+            slot = get_object_or_404(Slot.objects.select_for_update(), pk=slot_id, stadium=stadium)
             if slot.status == SlotStatus.BOOKED:
                 return Response(
                     {"detail": "Cannot block a booked slot."},
@@ -306,9 +310,7 @@ class UnblockSlotView(APIView):
         stadium = get_object_or_404(Stadium, pk=stadium_id, owner=request.user)
 
         with transaction.atomic():
-            slot = get_object_or_404(
-                Slot.objects.select_for_update(), pk=slot_id, stadium=stadium
-            )
+            slot = get_object_or_404(Slot.objects.select_for_update(), pk=slot_id, stadium=stadium)
             if slot.status != SlotStatus.BLOCKED:
                 return Response(
                     {"detail": "Only blocked slots can be unblocked."},
@@ -354,6 +356,7 @@ class AdminApproveStadiumView(APIView):
 
         # Trigger slot generation only for this newly active stadium
         from apps.stadiums.tasks import generate_slots_for_stadium
+
         generate_slots_for_stadium.delay(stadium.pk)
 
         # Notify owner (fire-and-forget; notification app is Phase 6)

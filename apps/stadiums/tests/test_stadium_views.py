@@ -3,10 +3,9 @@ Integration tests for Stadium CRUD and submit endpoint (owner-facing).
 """
 
 import pytest
-from django.urls import reverse
+from tests.factories import OwnerUserFactory, StadiumFactory, StadiumPhotoFactory
 
 from apps.stadiums.models import StadiumStatus
-from tests.factories import OwnerUserFactory, StadiumFactory, StadiumPhotoFactory
 
 
 @pytest.mark.integration

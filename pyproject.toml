@@ -2,7 +2,7 @@
 target-version = "py312"
 line-length = 100
 src = ["apps", "config"]
-
+exclude = ["*/tests/*", "tests/*"]
 [tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
@@ -17,9 +17,10 @@ select = [
     "RUF", # ruff-specific
 ]
 ignore = [
-    "S101",  # assert used — fine in tests
-    "S105",  # hardcoded password — false positives in settings keys
-    "DJ001", # avoid null=True on string fields — we allow it on optional fields
+    "S101",   # assert used — fine in tests
+    "S105",   # hardcoded password — false positives in settings keys
+    "DJ001",  # avoid null=True on string fields — we allow it on optional fields
+    "RUF012", # mutable class attrs in Meta inner classes — conventional Django/DRF pattern
 ]
 
 [tool.ruff.lint.per-file-ignores]
