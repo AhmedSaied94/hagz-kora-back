@@ -362,6 +362,40 @@ Never implement a new phase on `main` directly or on a stale branch.
 
 ---
 
+## Service layer
+
+Introduce `apps/<app>/services.py` when **any** of these conditions are true:
+
+- An operation has **more than one caller** (e.g. a view *and* a Celery task, or a view *and* a webhook handler). Keeping business logic in the view forces duplication or awkward imports.
+- An operation involves **multi-step mutations across models** that must succeed or fail together — the logic belongs in a service function wrapped in `transaction.atomic()`, not scattered across a view method.
+- The operation needs to be **tested independently of HTTP** — service functions can be called directly in unit tests without spinning up a request/response cycle.
+
+**Structure:**
+
+```python
+# apps/slots/services.py
+
+from django.db import transaction
+from apps.stadiums.models import Slot, SlotStatus
+
+def block_slot(stadium_id: int, slot_id: int) -> Slot:
+    with transaction.atomic():
+        slot = Slot.objects.select_for_update().get(pk=slot_id, stadium_id=stadium_id)
+        if slot.status == SlotStatus.BOOKED:
+            raise ValueError("Cannot block a booked slot.")
+        if slot.status == SlotStatus.BLOCKED:
+            raise ValueError("Slot is already blocked.")
+        slot.status = SlotStatus.BLOCKED
+        slot.save(update_fields=["status", "updated_at"])
+    return slot
+```
+
+The view becomes a thin HTTP adapter — validate input, call the service, map exceptions to HTTP status codes.
+
+**Do NOT create a service layer** just to avoid writing code in a view. If an operation has a single caller and fits in ~20 lines, keep it in the view or model method.
+
+---
+
 ## Django implementation standards
 
 Every Django implementation must follow the relevant Claude skill commands:
