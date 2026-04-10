@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import io
 import logging
-from datetime import date, datetime, time, timedelta
+import posixpath
+from datetime import date, datetime, timedelta
 
 from celery import shared_task
 from django.core.files.base import ContentFile
@@ -38,9 +39,9 @@ def generate_slots_for_all_stadiums(self):
     from apps.stadiums.models import OperatingHour, Slot, Stadium, StadiumStatus
 
     try:
-        active_stadiums = Stadium.objects.filter(
-            status=StadiumStatus.ACTIVE
-        ).prefetch_related("operating_hours")
+        active_stadiums = list(
+            Stadium.objects.filter(status=StadiumStatus.ACTIVE).prefetch_related("operating_hours")
+        )
 
         today = date.today()
         horizon = today + timedelta(days=SLOT_GENERATION_HORIZON_DAYS)
@@ -53,12 +54,39 @@ def generate_slots_for_all_stadiums(self):
         logger.info(
             "Slot generation complete. Created %d new slots across %d stadiums.",
             total_created,
-            active_stadiums.count(),
+            len(active_stadiums),
         )
         return {"created": total_created}
 
     except Exception as exc:
         logger.exception("Slot generation failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def generate_slots_for_stadium(self, stadium_id: int):
+    """
+    Generate slots for a single stadium (used after approval).
+
+    Runs the same 60-day horizon logic as the daily Beat task but scoped
+    to one stadium so approving a stadium doesn't fan out to all active stadiums.
+    """
+    from apps.stadiums.models import Stadium, StadiumStatus
+
+    try:
+        stadium = Stadium.objects.prefetch_related("operating_hours").get(
+            pk=stadium_id, status=StadiumStatus.ACTIVE
+        )
+        today = date.today()
+        horizon = today + timedelta(days=SLOT_GENERATION_HORIZON_DAYS)
+        created = _generate_slots_for_stadium(stadium, today, horizon)
+        logger.info("Slot generation for stadium %d complete. Created %d slots.", stadium_id, created)
+        return {"created": created}
+    except Stadium.DoesNotExist:
+        logger.warning("Stadium %d not found or not active — skipping slot generation.", stadium_id)
+        return {"created": 0}
+    except Exception as exc:
+        logger.exception("Slot generation failed for stadium %d: %s", stadium_id, exc)
         raise self.retry(exc=exc)
 
 
@@ -124,15 +152,29 @@ def process_stadium_photo(self, photo_id: int):
     absolute URLs back to StadiumPhoto.thumbnail_url / medium_url.
     """
     try:
-        from PIL import Image
+        from PIL import Image, UnidentifiedImageError
 
         from apps.stadiums.models import StadiumPhoto
+
+        # 40 MP cap — reject decompression bombs before loading pixel data
+        MAX_PIXELS = 40_000_000
 
         photo = StadiumPhoto.objects.select_related("stadium").get(pk=photo_id)
 
         with photo.image.open("rb") as f:
-            original = Image.open(f)
-            original.load()
+            try:
+                img = Image.open(f)
+            except UnidentifiedImageError:
+                logger.warning("Photo %d is not a valid image — skipping processing.", photo_id)
+                return None
+            if img.width * img.height > MAX_PIXELS:
+                logger.warning(
+                    "Photo %d exceeds max pixel count (%dx%d) — skipping processing.",
+                    photo_id, img.width, img.height,
+                )
+                return None
+            img.load()
+            original = img.copy()  # detach from file handle before it closes
 
         thumbnail_url = _save_variant(original, photo, "thumbnail", (400, 300))
         medium_url = _save_variant(original, photo, "medium", (800, 600))
@@ -169,8 +211,10 @@ def _save_variant(original_image, photo, variant_name: str, size: tuple[int, int
     canvas.save(buffer, format="JPEG", quality=85, optimize=True)
     buffer.seek(0)
 
-    original_name = photo.image.name.replace("original/", "")
-    stem = original_name.rsplit(".", 1)[0]
+    # Use basename only — strip any path components (including traversal sequences)
+    # to prevent variant files landing outside the intended storage prefix.
+    filename = posixpath.basename(photo.image.name)
+    stem = filename.rsplit(".", 1)[0]
     variant_path = f"stadiums/photos/{variant_name}/{stem}.jpg"
 
     saved_path = default_storage.save(variant_path, ContentFile(buffer.read()))

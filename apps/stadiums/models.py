@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-
 from django.contrib.gis.db import models as gis_models
 from django.db import models
 
@@ -106,8 +104,8 @@ class StadiumPhoto(TimeStampedModel):
         Stadium, on_delete=models.CASCADE, related_name="photos"
     )
     image = models.ImageField(upload_to="stadiums/photos/original/")
-    thumbnail_url = models.URLField(max_length=500, blank=True)
-    medium_url = models.URLField(max_length=500, blank=True)
+    thumbnail_url = models.URLField(max_length=2000, blank=True)
+    medium_url = models.URLField(max_length=2000, blank=True)
     order = models.PositiveIntegerField(default=0, db_index=True)
     is_cover = models.BooleanField(default=False, db_index=True)
 

@@ -46,12 +46,22 @@ class StadiumPhotoUploadSerializer(serializers.ModelSerializer):
         fields = ["id", "image", "order", "is_cover"]
         read_only_fields = ["id"]
 
+    # Magic-byte signatures for allowed image types (do NOT trust client Content-Type)
+    _ALLOWED_MAGIC = (
+        b"\xff\xd8\xff",         # JPEG
+        b"\x89PNG\r\n\x1a\n",   # PNG
+        b"RIFF",                 # WebP (RIFF....WEBP)
+    )
+
     def validate_image(self, image):
         max_size_bytes = 8 * 1024 * 1024  # 8 MB
         if image.size > max_size_bytes:
             raise serializers.ValidationError("Image file size must not exceed 8 MB.")
-        allowed_types = {"image/jpeg", "image/png", "image/webp"}
-        if image.content_type not in allowed_types:
+        # Validate actual file content via magic bytes — Content-Type is client-supplied
+        # and trivially spoofable, so we never use it as the sole type guard.
+        header = image.read(12)
+        image.seek(0)
+        if not any(header.startswith(sig) for sig in self._ALLOWED_MAGIC):
             raise serializers.ValidationError("Only JPEG, PNG, and WebP images are accepted.")
         return image
 
@@ -165,17 +175,15 @@ class StadiumSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "status", "rejection_note", "created_at", "updated_at"]
 
     def get_cover_photo_url(self, obj: Stadium) -> str | None:
-        cover = obj.photos.filter(is_cover=True).first()
-        if cover is None:
-            cover = obj.photos.first()
+        # Use the prefetch cache — do NOT call .filter() which bypasses it and causes N+1.
+        photos = list(obj.photos.all())
+        cover = next((p for p in photos if p.is_cover), None) or (photos[0] if photos else None)
         if cover is None:
             return None
-        request = self.context.get("request")
         if cover.thumbnail_url:
             return cover.thumbnail_url
-        if request:
-            return request.build_absolute_uri(cover.image.url)
-        return cover.image.url
+        request = self.context.get("request")
+        return request.build_absolute_uri(cover.image.url) if request else cover.image.url
 
     def validate_location(self, value):
         if value is not None and value.srid != 4326:
@@ -203,17 +211,15 @@ class StadiumListSerializer(serializers.ModelSerializer):
         ]
 
     def get_cover_photo_url(self, obj: Stadium) -> str | None:
-        cover = obj.photos.filter(is_cover=True).first()
-        if cover is None:
-            cover = obj.photos.first()
+        # Use the prefetch cache — do NOT call .filter() which bypasses it and causes N+1.
+        photos = list(obj.photos.all())
+        cover = next((p for p in photos if p.is_cover), None) or (photos[0] if photos else None)
         if cover is None:
             return None
         if cover.thumbnail_url:
             return cover.thumbnail_url
         request = self.context.get("request")
-        if request:
-            return request.build_absolute_uri(cover.image.url)
-        return cover.image.url
+        return request.build_absolute_uri(cover.image.url) if request else cover.image.url
 
 
 # ---------------------------------------------------------------------------

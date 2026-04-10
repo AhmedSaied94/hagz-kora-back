@@ -98,12 +98,14 @@ class StadiumViewSet(viewsets.ModelViewSet):
     def submit(self, request: Request, pk=None):
         """Submit a draft stadium for admin review."""
         stadium = self.get_object()
-        if not stadium.photos.exists():
+        # Use the prefetch cache — .exists()/.filter() bypass it and cause extra queries.
+        photos = list(stadium.photos.all())
+        if not photos:
             return Response(
                 {"detail": "Upload at least one photo before submitting."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not stadium.photos.filter(is_cover=True).exists():
+        if not any(p.is_cover for p in photos):
             return Response(
                 {"detail": "Designate a cover photo before submitting."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -221,11 +223,11 @@ class StadiumPhotoViewSet(viewsets.ViewSet):
         if serializer.validated_data.get("is_cover"):
             with transaction.atomic():
                 stadium.photos.exclude(pk=photo.pk).filter(is_cover=True).update(is_cover=False)
-                serializer.save()
+                updated_photo = serializer.save()
         else:
-            serializer.save()
+            updated_photo = serializer.save()
 
-        out = StadiumPhotoSerializer(photo, context={"request": request})
+        out = StadiumPhotoSerializer(updated_photo, context={"request": request})
         return Response(out.data)
 
     def destroy(self, request: Request, stadium_id: int, photo_id: int) -> Response:
@@ -274,21 +276,24 @@ class BlockSlotView(APIView):
 
     def post(self, request: Request, stadium_id: int, slot_id: int) -> Response:
         stadium = get_object_or_404(Stadium, pk=stadium_id, owner=request.user)
-        slot = get_object_or_404(Slot, pk=slot_id, stadium=stadium)
 
-        if slot.status == SlotStatus.BOOKED:
-            return Response(
-                {"detail": "Cannot block a booked slot."},
-                status=status.HTTP_400_BAD_REQUEST,
+        with transaction.atomic():
+            slot = get_object_or_404(
+                Slot.objects.select_for_update(), pk=slot_id, stadium=stadium
             )
-        if slot.status == SlotStatus.BLOCKED:
-            return Response(
-                {"detail": "Slot is already blocked."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            if slot.status == SlotStatus.BOOKED:
+                return Response(
+                    {"detail": "Cannot block a booked slot."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if slot.status == SlotStatus.BLOCKED:
+                return Response(
+                    {"detail": "Slot is already blocked."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            slot.status = SlotStatus.BLOCKED
+            slot.save(update_fields=["status", "updated_at"])
 
-        slot.status = SlotStatus.BLOCKED
-        slot.save(update_fields=["status", "updated_at"])
         return Response(SlotSerializer(slot).data)
 
 
@@ -299,16 +304,19 @@ class UnblockSlotView(APIView):
 
     def post(self, request: Request, stadium_id: int, slot_id: int) -> Response:
         stadium = get_object_or_404(Stadium, pk=stadium_id, owner=request.user)
-        slot = get_object_or_404(Slot, pk=slot_id, stadium=stadium)
 
-        if slot.status != SlotStatus.BLOCKED:
-            return Response(
-                {"detail": "Only blocked slots can be unblocked."},
-                status=status.HTTP_400_BAD_REQUEST,
+        with transaction.atomic():
+            slot = get_object_or_404(
+                Slot.objects.select_for_update(), pk=slot_id, stadium=stadium
             )
+            if slot.status != SlotStatus.BLOCKED:
+                return Response(
+                    {"detail": "Only blocked slots can be unblocked."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            slot.status = SlotStatus.AVAILABLE
+            slot.save(update_fields=["status", "updated_at"])
 
-        slot.status = SlotStatus.AVAILABLE
-        slot.save(update_fields=["status", "updated_at"])
         return Response(SlotSerializer(slot).data)
 
 
@@ -344,9 +352,9 @@ class AdminApproveStadiumView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Trigger slot generation for the newly active stadium
-        from apps.stadiums.tasks import generate_slots_for_all_stadiums
-        generate_slots_for_all_stadiums.delay()
+        # Trigger slot generation only for this newly active stadium
+        from apps.stadiums.tasks import generate_slots_for_stadium
+        generate_slots_for_stadium.delay(stadium.pk)
 
         # Notify owner (fire-and-forget; notification app is Phase 6)
         _notify_owner_approval(stadium)
