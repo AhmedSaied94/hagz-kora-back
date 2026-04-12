@@ -29,13 +29,14 @@ TWO = Decimal("2")
 
 
 def _enqueue_notifications(booking_id: int) -> None:
-    """Enqueue post-booking notification tasks.
+    """Enqueue post-booking notification tasks for player and owner."""
+    from apps.notifications.tasks import (
+        notify_booking_confirmed_owner,
+        notify_booking_confirmed_player,
+    )
 
-    TODO(Phase 4 — notifications): wire to Celery tasks once they land.
-    For now this is a no-op placeholder; callers schedule it via
-    transaction.on_commit so enqueueing only happens after the DB commit.
-    """
-    logger.debug("Booking %s committed — notifications to be enqueued (Phase 4).", booking_id)
+    notify_booking_confirmed_player.delay(booking_id)
+    notify_booking_confirmed_owner.delay(booking_id)
 
 
 def create_booking(user: User, slot_id: int) -> Booking:
@@ -157,6 +158,8 @@ def cancel_booking(user: User, booking_id: int) -> Booking:
         slot.status = SlotStatus.AVAILABLE
         slot.save(update_fields=["status", "updated_at"])
 
+        transaction.on_commit(lambda bid=booking.id: _enqueue_player_cancellation_notification(bid))
+
     return booking
 
 
@@ -206,6 +209,13 @@ def cancel_booking_by_owner(owner: User, booking_id: int, reason: str) -> Bookin
         transaction.on_commit(lambda bid=booking.id: _enqueue_owner_cancellation_notification(bid))
 
     return booking
+
+
+def _enqueue_player_cancellation_notification(booking_id: int) -> None:
+    """Enqueue owner notification after a player cancellation."""
+    from apps.notifications.tasks import notify_booking_cancelled_by_player
+
+    notify_booking_cancelled_by_player.delay(booking_id)
 
 
 def _enqueue_owner_cancellation_notification(booking_id: int) -> None:

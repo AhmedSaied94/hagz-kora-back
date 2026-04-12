@@ -20,6 +20,10 @@ class DeviceToken(TimeStampedModel):
         ANDROID = "android", "Android"
         IOS = "ios", "iOS"
 
+    class Language(models.TextChoices):
+        AR = "ar", "Arabic"
+        EN = "en", "English"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -32,6 +36,11 @@ class DeviceToken(TimeStampedModel):
         default=Platform.ANDROID,
     )
     is_active = models.BooleanField(default=True)
+    language = models.CharField(
+        max_length=2,
+        choices=Language.choices,
+        default=Language.AR,
+    )
 
     class Meta:
         verbose_name = "device token"

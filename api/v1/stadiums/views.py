@@ -386,13 +386,19 @@ class AdminRejectStadiumView(APIView):
 
 
 # ---------------------------------------------------------------------------
-# Notification stubs (Phase 6 will implement real delivery)
+# Notification helpers
 # ---------------------------------------------------------------------------
 
 
 def _notify_owner_approval(stadium: Stadium) -> None:
-    """Placeholder — Phase 6 wires up FCM + SMS."""
+    """Enqueue FCM + SMS notification to the owner after stadium approval."""
+    from apps.notifications.tasks import notify_stadium_approved
+
+    notify_stadium_approved.delay(stadium.pk)
 
 
 def _notify_owner_rejection(stadium: Stadium) -> None:
-    """Placeholder — Phase 6 wires up FCM + SMS."""
+    """Enqueue FCM + SMS notification to the owner after stadium rejection."""
+    from apps.notifications.tasks import notify_stadium_rejected
+
+    notify_stadium_rejected.delay(stadium.pk)

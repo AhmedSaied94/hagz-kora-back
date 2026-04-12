@@ -93,6 +93,7 @@ class DeviceTokenFactory(DjangoModelFactory):
     token = factory.Sequence(lambda n: f"fcm-token-{n:06d}")
     platform = DeviceToken.Platform.ANDROID
     is_active = True
+    language = DeviceToken.Language.AR
 
 
 # ---------------------------------------------------------------------------
