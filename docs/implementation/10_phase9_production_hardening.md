@@ -1,9 +1,26 @@
 # Phase 9 — Production Hardening
 
-**Duration:** Week 13–14  
+**Duration:** Week 13–14
 **Priority:** P1
 
 **Goal:** Platform is secure, observable, performant, and meets the Definition of Done from the PRD.
+
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| Security audit (auth surfaces, rate limiting, input validation, admin IP whitelist) | `opus-4-6` | Extended thinking | Full adversarial review — model attacker paths across auth, booking, file upload, admin panel |
+| ORM query audit (N+1 elimination, `select_related`/`prefetch_related`) | `sonnet-4-6` | High | Systematically review every list endpoint; use Django Debug Toolbar output as input |
+| Coverage gap closure (bookings, tournaments, auth — target 80%+) | `sonnet-4-6` | High | Integration tests must hit real DB + Redis; write missing tests for critical paths first |
+| Structured logging (`structlog`) + Sentry integration | `sonnet-4-6` | Medium | Wire `request_id` and `user_id` into every log line; verify Sentry DSN is env-var-only |
+| PgBouncer + Gunicorn + Nginx config tuning | `sonnet-4-6` | Medium | Follow load test results; don't tune blind |
+| Repetitive test writing for lower-priority modules (reviews, notifications) | `haiku-4-5` | Low | Pattern is established — use Haiku to fill coverage gaps in simpler modules |
+| Celery monitoring (Flower), health check verification | `haiku-4-5` | Low | Config-level work |
+| Infrastructure checklist items (DB snapshots, `.env.example` audit, Docker parity) | `haiku-4-5` | Low | Verification tasks, not implementation |
+
+> **Lead with the security audit (Opus, extended thinking) before any other hardening task.** Vulnerabilities found late are expensive. After the audit, Sonnet handles the ORM and test coverage work in parallel with Haiku handling boilerplate verification tasks.
 
 ---
 

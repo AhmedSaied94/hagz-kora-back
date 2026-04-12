@@ -12,6 +12,7 @@ urlpatterns = [
     path("owners/", include("api.v1.auth.owner_urls")),
     path("stadiums/", include("api.v1.stadiums.urls")),
     path("owner/stadiums/", include("api.v1.stadiums.owner_urls")),
+    path("owner/bookings/", include("api.v1.bookings.owner_urls")),
     path("admin/stadiums/", include("api.v1.stadiums.admin_urls")),
     path("bookings/", include("api.v1.bookings.urls")),
     path("tournaments/", include("api.v1.tournaments.urls")),

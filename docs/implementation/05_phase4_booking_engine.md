@@ -1,9 +1,24 @@
 # Phase 4 — Booking Engine
 
-**Duration:** Week 6–8  
+**Duration:** Week 6–8
 **Priority:** P0 (launch blocker)
 
 **Goal:** Race-condition-safe slot booking with state management and notifications.
+
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| Redis distributed lock design (lock key shape, TTL, TOCTOU prevention, failure modes) | `opus-4-6` | Extended thinking | This is the hardest concurrency problem in the codebase — model all failure modes: lock timeout, DB failure mid-lock, duplicate requests |
+| Atomic booking flow implementation (`POST /api/bookings/`) | `opus-4-6` | High | Implement from the Opus design; do not cut corners on the re-check inside the lock |
+| Booking status machine + cancellation rules | `sonnet-4-6` | High | Enforce 2-hour window, `is_late_cancellation` flag, slot status rollback on cancel |
+| Owner cancellation endpoint | `sonnet-4-6` | Medium | Simpler than player cancel — reason required, notify player, no time restriction |
+| Celery Beat: mark completed bookings | `sonnet-4-6` | Medium | Bulk update — use `select_related` and batch correctly |
+| Booking list/detail endpoints | `haiku-4-5` | Low | Standard read-only views with permission guards |
+
+> **This phase has the highest blast radius of any phase.** Use Opus with extended thinking for the lock design **before a single line of booking code is written**. A race condition here causes double-bookings that cannot be undone. Integration tests must hit a real Redis + PostgreSQL instance — no mocking the lock.
 
 ---
 
@@ -103,7 +118,7 @@ Body: { "slot_id": "uuid" }
 
 ## Deliverable
 
-Booking works correctly under concurrent load — no double-bookings possible.  
-All booking state transitions handled.  
-Cancellation rules enforced.  
+Booking works correctly under concurrent load — no double-bookings possible.
+All booking state transitions handled.
+Cancellation rules enforced.
 Notifications dispatched via Celery for all booking events.

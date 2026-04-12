@@ -1,11 +1,24 @@
 # Phase 7 — Ratings & Reviews
 
-**Duration:** Week 10–11  
+**Duration:** Week 10–11
 **Priority:** P1
 
 **Goal:** Players review stadiums they've actually played at. Owners can respond.
 
 **Dependency:** Phase 4 (Booking Engine) — review eligibility requires a completed booking.
+
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| Eligibility enforcement (completed booking gate + unique constraint) | `sonnet-4-6` | Medium | DB unique constraint + server-side check — both required to prevent race on concurrent submits |
+| Review submit + owner response endpoints | `sonnet-4-6` | Medium | Standard DRF; verify permission classes (player owns booking, owner owns stadium) |
+| Signal-based `avg_rating` update | `sonnet-4-6` | Medium | `post_save` signal on `Review`; also handle `post_delete` if reviews can be removed |
+| Sub-rating aggregation in stadium detail response | `haiku-4-5` | Low | `Avg()` annotation — add to the existing stadium detail serializer |
+
+> **Lightest phase in the codebase.** No extended thinking needed. The only non-obvious requirement is that the unique constraint on `Review.booking` must be enforced at the DB level, not just in the serializer.
 
 ---
 
@@ -55,7 +68,7 @@ Enforced via unique constraint on `Review.booking` and server-side eligibility c
 
 ## Deliverable
 
-Reviews gated to completed bookings only.  
-Owner can respond to any review on their stadiums.  
-Aggregate rating updates automatically on new review submission.  
+Reviews gated to completed bookings only.
+Owner can respond to any review on their stadiums.
+Aggregate rating updates automatically on new review submission.
 Rating and sub-ratings displayed correctly in search results and stadium detail.
