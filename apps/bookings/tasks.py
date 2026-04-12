@@ -35,7 +35,6 @@ def mark_completed_bookings(self) -> dict:
                     status=BookingStatus.CONFIRMED,
                 )
                 .filter(Q(slot__date__lt=today) | Q(slot__date=today, slot__end_time__lt=time_now))
-                .select_related("slot")
                 .update(status=BookingStatus.COMPLETED)
             )
     except OperationalError as exc:

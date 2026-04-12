@@ -303,9 +303,6 @@ class TestBookingCreateValidation:
         url = reverse("booking-list")
         response = player_client.post(url, {"slot_id": 99999})
 
-        # Assert — expect 400 for invalid input or 405 due to routing
-        # (both list and create are on same path, causing routing conflict)
-        assert response.status_code in (
-            status.HTTP_400_BAD_REQUEST,
-            status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+        # Assert — slot_id passes serializer validation (valid int), so the
+        # service runs and returns 409 because slot 99999 does not exist.
+        assert response.status_code == status.HTTP_409_CONFLICT

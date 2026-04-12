@@ -1,11 +1,29 @@
 # Phase 8 — Owner & Admin Dashboards
 
-**Duration:** Week 11–13  
+**Duration:** Week 11–13
 **Priority:** P1
 
 **Goal:** Functional web dashboards for stadium owners and platform admins, backed by the same REST API.
 
-**Architecture:** Django server-rendered templates + React Web Components (via `@bitovi/react-to-web-component`).  
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| React WC integration architecture (Vite build, Django staticfiles, CSRF pattern) | `opus-4-6` | Extended thinking | The Django-template + React WC hybrid is the trickiest part — model the full request/auth/CSRF flow before touching code |
+| React Web Components (`<owner-analytics>`, `<booking-calendar>`, `<standings-table>`, etc.) | `sonnet-4-6` | High | Each WC is a self-contained React app; fetch designs from Stitch (`mcp__stitch__get_screen`) before implementing |
+| Server-rendered owner pages (stadium list, create/edit, operating hours, reviews, profile) | `sonnet-4-6` | Medium | Standard Django class-based views + forms; fetch Stitch specs for layout |
+| Admin server-rendered pages (KYC queue, stadium approval, users, bookings list) | `sonnet-4-6` | Medium | Same pattern — but admin namespace is separate; IP whitelist middleware must be in place |
+| `<gallery-lightbox>` and `<admin-analytics>` WCs | `sonnet-4-6` | High | Data-visualization WCs — fetch Stitch screens first |
+| Repetitive list/detail server-rendered admin pages (bookings, tournaments, settings) | `haiku-4-5` | Low | Pattern is established after the first few — use Haiku to crank through the remaining pages |
+| Session auth views (owner login, admin login, logout) | `sonnet-4-6` | Medium | Must use session cookies, not JWT; CSRF protection required |
+
+> **Always fetch Stitch screen specs (`mcp__stitch__get_screen` with projectId `9141633750453935736` for owner, `11388881882164762104` for admin) before implementing any page.** Do not design UI from scratch. Run Opus once at the start to design the WC integration architecture, then switch to Sonnet for all implementation.
+
+
+
+**Architecture:** Django server-rendered templates + React Web Components (via `@bitovi/react-to-web-component`).
 No separate Node.js server — React components compiled to static JS bundles served by Django/WhiteNoise.
 
 **Auth:** Session cookie + Django session auth (not JWT). CSRF token passed in `X-CSRFToken` header from all React WC `fetch()` calls.
@@ -55,7 +73,7 @@ Requires Owner authentication. Owner must have `kyc_approved` status.
 
 ## Admin Dashboard (`/admin-panel/`) — 16 Pages
 
-Fully custom Django views — no Django Admin extension. Restricted to IP whitelist in production.  
+Fully custom Django views — no Django Admin extension. Restricted to IP whitelist in production.
 Separate admin-only session auth (admin users have `role=admin` on the User model).
 
 | # | Page | URL | Implementation | Notes |

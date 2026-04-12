@@ -1,9 +1,25 @@
 # Phase 1 — Authentication & User Profiles
 
-**Duration:** Week 2–3  
+**Duration:** Week 2–3
 **Priority:** P0 (launch blocker)
 
 **Goal:** Players and Owners can register, verify, and authenticate. JWT tokens issued.
+
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| OTP security design (hashing, rate limiting, lock strategy) | `opus-4-6` | Extended thinking | Security-critical and irreversible design choices; think through all attack vectors |
+| JWT config (TTLs, blacklist, rotation strategy) | `opus-4-6` | High | Wrong TTL or missing blacklist = auth vulnerability |
+| OTP endpoints implementation | `sonnet-4-6` | High | Follow design from Opus step; enforce all rules from §1.2 |
+| Email/password auth (dev only) | `sonnet-4-6` | Medium | Simpler flow; validate backend toggle is correctly gated |
+| Player & Owner profile endpoints | `sonnet-4-6` | Medium | Standard CRUD; ensure role-based permission classes are wired |
+| FCM device token registration | `haiku-4-5` | Low | Straightforward upsert pattern |
+| Permission classes (`IsPlayer`, `IsOwner`, etc.) | `haiku-4-5` | Low | Simple role checks; defined once, reused everywhere |
+
+> **Run `/django-security` before writing any auth code.** OTP flows are the highest-risk surface in the entire backend.
 
 ---
 

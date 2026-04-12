@@ -1,9 +1,23 @@
 # Phase 0 — Project Foundation & Infrastructure
 
-**Duration:** Week 1–2  
+**Duration:** Week 1–2
 **Priority:** P0 (launch blocker)
 
 **Goal:** A running, containerized Django project that every future phase can build on.
+
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| Project scaffold, app layout, settings split | `haiku-4-5` | Low | Formulaic — follow the layout in `backend/CLAUDE.md` exactly |
+| Docker Compose (local + prod), CI skeleton | `sonnet-4-6` | Medium | Needs correct service wiring and health check integration |
+| Custom User model (0.2 decision) | `sonnet-4-6` | High | **Irreversible** — must be correct before the first migration; read Key Decisions below first |
+| `.env.example`, base model, Ruff/pre-commit | `haiku-4-5` | Low | Boilerplate; copy established patterns |
+| drf-spectacular setup + health check endpoint | `haiku-4-5` | Low | One-time config |
+
+> **Extended thinking not required for this phase.** The hardest call is the custom User model; Sonnet at high effort is sufficient given the clear spec.
 
 ---
 
@@ -27,7 +41,7 @@
 
 ## Deliverable
 
-`docker compose -f docker-compose.local.yml up` starts all backing services.  
+`docker compose -f docker-compose.local.yml up` starts all backing services.
 `python manage.py runserver` starts Django connected to them via localhost port mappings.
 
 ---

@@ -1,9 +1,25 @@
 # Phase 2 — Stadium Management
 
-**Duration:** Week 3–5  
+**Duration:** Week 3–5
 **Priority:** P0 (launch blocker)
 
 **Goal:** Owners can create and manage stadium listings. Admins can approve/reject.
+
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| Data models (`Stadium`, `StadiumPhoto`, `OperatingHour`, `Slot`) | `sonnet-4-6` | Medium | Spatial `PointField`, JSONField for amenities; no surprises but needs care |
+| Stadium CRUD + approval workflow | `sonnet-4-6` | Medium | Standard DRF views; status machine is simple — draft → pending → active |
+| Photo upload + S3 pipeline | `sonnet-4-6` | High | Celery task for thumbnail/medium generation; validate file type/size before S3 upload |
+| Daily slot generation (Celery Beat) | `sonnet-4-6` | High | Must be idempotent; off-by-one errors in time range generation are common here |
+| Gallery reorder endpoint | `haiku-4-5` | Low | Bulk update of `order` field — straightforward |
+| Slot block/unblock endpoints | `haiku-4-5` | Low | Simple status toggle with permission guard |
+| Admin approval/rejection endpoints | `haiku-4-5` | Low | Status update + trigger notification task |
+
+> **Extended thinking not needed.** Highest complexity is the idempotent slot generator and Celery S3 pipeline — Sonnet at high effort covers both.
 
 ---
 
@@ -98,6 +114,6 @@ On approval/rejection: push notification + SMS sent to owner.
 
 ## Deliverable
 
-Owner can create a stadium, upload photos, set operating hours, and submit for review.  
-Admin can approve or reject from the pending queue.  
+Owner can create a stadium, upload photos, set operating hours, and submit for review.
+Admin can approve or reject from the pending queue.
 Approved stadiums have slots auto-generated 60 days ahead.

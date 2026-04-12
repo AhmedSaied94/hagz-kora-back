@@ -80,7 +80,8 @@ def test_owner_cancel_happy_path(owner, owner_client, confirmed_booking, slot):
     """
     url = _cancel_url(confirmed_booking.pk)
 
-    with patch("apps.notifications.tasks.notify_player_of_owner_cancellation.delay") as mock_task:
+    with patch("apps.bookings.services.transaction.on_commit", side_effect=lambda fn, **kw: fn()), \
+         patch("apps.notifications.tasks.notify_player_of_owner_cancellation.delay") as mock_task:
         response = owner_client.post(url, {"cancellation_reason": "Maintenance required"})
 
     assert response.status_code == status.HTTP_200_OK, response.data

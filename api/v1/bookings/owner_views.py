@@ -64,14 +64,14 @@ class OwnerCancelBookingView(GenericAPIView):
                 {"detail": "Not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        except BookingNotCancellable as exc:
+        except BookingNotCancellable:
             return Response(
-                {"code": "NOT_CANCELLABLE", "error": str(exc)},
+                {"code": "NOT_CANCELLABLE", "error": "This booking cannot be cancelled."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except ValueError as exc:
+        except ValueError:
             return Response(
-                {"code": "REASON_REQUIRED", "error": str(exc)},
+                {"code": "REASON_REQUIRED", "error": "A cancellation reason is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

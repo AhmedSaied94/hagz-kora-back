@@ -55,9 +55,16 @@ def create_booking(user: User, slot_id: int) -> Booking:
         .first()
     )
     if preview is None or preview.status != SlotStatus.AVAILABLE:
-        raise SlotNotAvailable(f"Slot {slot_id} is not available.")
+        logger.debug("create_booking pre-check: slot %s unavailable, user %s.", slot_id, user.id)
+        raise SlotNotAvailable("This slot is not currently available.")
     if preview.stadium.status != StadiumStatus.ACTIVE:
-        raise StadiumInactive(f"Stadium {preview.stadium_id} is not active.")
+        logger.debug(
+            "create_booking pre-check: stadium %s inactive, slot %s, user %s.",
+            preview.stadium_id,
+            slot_id,
+            user.id,
+        )
+        raise StadiumInactive("This stadium is not currently accepting bookings.")
 
     # 2. Redis-locked critical section.
     with booking_slot_lock(slot_id, user.id):
@@ -66,12 +73,18 @@ def create_booking(user: User, slot_id: int) -> Booking:
                 slot = Slot.objects.select_for_update().select_related("stadium").get(pk=slot_id)
 
                 if slot.status != SlotStatus.AVAILABLE:
-                    raise SlotNotAvailable(f"Slot {slot_id} is not available.")
+                    raise SlotNotAvailable("This slot is not currently available.")
                 if slot.stadium.status != StadiumStatus.ACTIVE:
-                    raise StadiumInactive(f"Stadium {slot.stadium_id} is not active.")
+                    raise StadiumInactive("This stadium is not currently accepting bookings.")
 
                 price = slot.stadium.price_per_slot
                 deposit = (price / TWO).quantize(Decimal("0.01"))
+
+                # Update slot status FIRST so any IntegrityError rollback also
+                # reverts the slot change — keeps DB consistent without relying
+                # solely on the partial UniqueConstraint as the backstop.
+                slot.status = SlotStatus.BOOKED
+                slot.save(update_fields=["status", "updated_at"])
 
                 booking = Booking.objects.create(
                     player=user,
@@ -82,15 +95,17 @@ def create_booking(user: User, slot_id: int) -> Booking:
                     deposit_amount=deposit,
                 )
 
-                slot.status = SlotStatus.BOOKED
-                slot.save(update_fields=["status", "updated_at"])
-
                 transaction.on_commit(lambda bid=booking.id: _enqueue_notifications(bid))
         except IntegrityError as exc:
             # Partial UniqueConstraint tripped — another worker beat us
             # past the DB row lock (should be impossible under the Redis
             # lock, but the constraint is the final source of truth).
-            raise SlotNotAvailable(f"Slot {slot_id} is not available.") from exc
+            logger.warning(
+                "create_booking: IntegrityError for slot %s, user %s — constraint tripped.",
+                slot_id,
+                user.id,
+            )
+            raise SlotNotAvailable("This slot is not currently available.") from exc
 
     return booking
 
@@ -98,7 +113,8 @@ def create_booking(user: User, slot_id: int) -> Booking:
 def cancel_booking(user: User, booking_id: int) -> Booking:
     """Cancel a confirmed booking by the player who made it.
 
-    Sets is_late_cancellation=True if the slot starts within 2 hours of now.
+    Sets is_late_cancellation=True if the slot starts within 2 hours of now
+    (negative hours_until means the slot has already started — also late).
     Rolls Slot.status back to 'available'.
     Both changes are committed atomically.
 
@@ -110,14 +126,18 @@ def cancel_booking(user: User, booking_id: int) -> Booking:
         # Scope to this player so another player gets a 404, not a 403.
         booking = (
             Booking.objects.select_for_update()
-            .select_related("slot")
+            .select_related("slot", "stadium")
             .get(pk=booking_id, player=user)
         )
 
         if booking.status != BookingStatus.CONFIRMED:
-            raise BookingNotCancellable(
-                f"Booking {booking_id} cannot be cancelled — current status: {booking.status}."
+            logger.info(
+                "cancel_booking rejected: booking %s status=%s, user %s.",
+                booking_id,
+                booking.status,
+                user.id,
             )
+            raise BookingNotCancellable("This booking cannot be cancelled.")
 
         slot = booking.slot
 
@@ -157,11 +177,22 @@ def cancel_booking_by_owner(owner: User, booking_id: int, reason: str) -> Bookin
         raise ValueError("cancellation_reason is required.")
 
     with transaction.atomic():
+        # Scope to owner's stadiums only; non-owned booking raises DoesNotExist (→ 404).
+        # Status is checked separately so a double-cancel returns 400, not a confusing 404.
         booking = (
             Booking.objects.select_for_update()
             .select_related("slot", "stadium")
-            .get(pk=booking_id, stadium__owner=owner, status=BookingStatus.CONFIRMED)
+            .get(pk=booking_id, stadium__owner=owner)
         )
+
+        if booking.status != BookingStatus.CONFIRMED:
+            logger.info(
+                "cancel_booking_by_owner rejected: booking %s status=%s, owner %s.",
+                booking_id,
+                booking.status,
+                owner.id,
+            )
+            raise BookingNotCancellable("This booking cannot be cancelled.")
 
         booking.status = BookingStatus.CANCELLED_BY_OWNER
         booking.cancelled_by = owner

@@ -1,9 +1,26 @@
 # Phase 6 — Tournament Engine
 
-**Duration:** Week 8–11  
+**Duration:** Week 8–11
 **Priority:** P1 (Phase 1, post-MVP launch)
 
 **Goal:** Full tournament lifecycle — creation, team registration, fixture generation (3 formats), score entry, live standings, public page.
+
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| Fixture generation algorithms (round-robin circle method, knockout with byes, group→knockout) | `opus-4-6` | Extended thinking | Three distinct algorithms, each with edge cases (odd N, non-power-of-2 teams, bye insertion). Model all cases before coding. |
+| Standings computation with tiebreakers | `opus-4-6` | High | Tiebreaker chain (points → GD → GF → H2H) is easy to get subtly wrong; reason through the sort key carefully |
+| Auto-generation of next-round knockout fixtures on round completion | `opus-4-6` | High | Trigger logic requires careful reasoning about "all matches in round complete" detection |
+| `fixture_generator.py` service implementation | `sonnet-4-6` | High | Implement from Opus design; unit-test each format with known inputs and expected outputs |
+| Tournament CRUD + lifecycle endpoints (owner) | `sonnet-4-6` | Medium | Status machine is well-defined; wire publish/close-registration/complete correctly |
+| Team registration + join-by-code | `sonnet-4-6` | Medium | Min-player enforcement, auto-close on `max_teams` |
+| Score entry endpoint | `sonnet-4-6` | Medium | Trigger knockout round generation on completion; standings recomputed on GET |
+| Public tournament page (no auth) | `haiku-4-5` | Low | Read-only — apply caching if load warrants it |
+
+> **Do not start implementation until Opus has fully designed the three fixture algorithms.** Round-robin circle method bugs only surface with N≥6; knockout bye bugs surface with N not a power of 2. Write the algorithm, then unit test it manually with N=3,4,5,6,7,8 before connecting it to the API.
 
 ---
 
@@ -129,7 +146,7 @@ Each tournament also has a shareable public web URL at `/tournaments/<public_slu
 
 ## Deliverable
 
-All 3 fixture formats generate correct, complete schedules.  
-Standings compute correctly including all tiebreakers.  
-Public page accessible without authentication.  
+All 3 fixture formats generate correct, complete schedules.
+Standings compute correctly including all tiebreakers.
+Public page accessible without authentication.
 Next-round knockout fixtures auto-generate on round completion.

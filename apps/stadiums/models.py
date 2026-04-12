@@ -163,6 +163,10 @@ class Slot(TimeStampedModel):
         verbose_name_plural = "slots"
         unique_together = ("stadium", "date", "start_time")
         ordering = ["date", "start_time"]
+        indexes = [
+            # mark_completed_bookings task: date < today OR (date=today AND end_time < now)
+            models.Index(fields=["date", "end_time"], name="slot_date_end_time_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.stadium} | {self.date} {self.start_time}-{self.end_time}"

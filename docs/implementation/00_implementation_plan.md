@@ -30,6 +30,36 @@
 
 ---
 
+## AI Model Guide (per Phase)
+
+Each phase document contains a detailed per-task breakdown. This table shows the leading model and the tasks that require Opus with extended thinking.
+
+| Phase | Primary Model | Requires Opus + Extended Thinking |
+|-------|--------------|-----------------------------------|
+| 0 — Foundation | `haiku-4-5` / `sonnet-4-6` | No — Custom User model is Sonnet high-effort |
+| 1 — Auth | `sonnet-4-6` | **Yes** — OTP security design, JWT strategy |
+| 2 — Stadium Mgmt | `sonnet-4-6` | No — Idempotent slot gen is Sonnet high-effort |
+| 3 — Search | `sonnet-4-6` | **Yes** — PostGIS query + Redis cache design |
+| 4 — Booking Engine | `opus-4-6` | **Yes** — Redis lock design is the highest-risk task in the codebase |
+| 5 — Notifications | `sonnet-4-6` / `haiku-4-5` | No — Well-specified service wiring |
+| 6 — Tournament | `opus-4-6` | **Yes** — All three fixture algorithms + tiebreaker standings |
+| 7 — Ratings | `sonnet-4-6` | No — Lightest phase; unique constraint is the only gotcha |
+| 8 — Dashboards | `sonnet-4-6` | **Yes** — React WC + Django template integration architecture |
+| 9 — Hardening | `sonnet-4-6` | **Yes** — Full adversarial security audit |
+
+**Model key:**
+- `haiku-4-5` — Boilerplate, formulaic CRUD, config tasks
+- `sonnet-4-6` — Standard implementation, service wiring, complex views
+- `opus-4-6` — Algorithm design, security-critical decisions, architectural trade-offs
+
+**Effort levels** (defined per-task in each phase doc):
+- **Low** — Formulaic, minimal judgment
+- **Medium** — Standard implementation work
+- **High** — Complex logic, multi-step reasoning
+- **Extended thinking** — Enable with `Alt+T`; use for the hardest design decisions before any code is written
+
+---
+
 ## Critical Path
 
 ```

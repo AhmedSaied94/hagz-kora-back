@@ -19,7 +19,8 @@ class OwnerCancelBookingSerializer(serializers.Serializer):
         required=True,
         allow_blank=False,
         min_length=5,
-        help_text="Reason the owner is cancelling this booking (minimum 5 characters).",
+        max_length=500,
+        help_text="Reason the owner is cancelling this booking (5-500 characters).",
     )
 
 

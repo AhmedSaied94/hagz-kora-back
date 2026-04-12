@@ -14,6 +14,7 @@ TTL:
 
 from __future__ import annotations
 
+import threading
 from contextlib import contextmanager
 from uuid import uuid4
 
@@ -36,13 +37,16 @@ end
 """
 
 _client: redis.Redis | None = None
+_client_init_lock = threading.Lock()
 
 
 def _get_client() -> redis.Redis:
-    """Return a module-level cached redis-py client (lazy init)."""
+    """Return a module-level cached redis-py client (thread-safe lazy init)."""
     global _client
     if _client is None:
-        _client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        with _client_init_lock:
+            if _client is None:
+                _client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
     return _client
 
 

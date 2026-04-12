@@ -68,6 +68,14 @@ class Booking(TimeStampedModel):
                 name="unique_confirmed_booking_per_slot",
             ),
         ]
+        indexes = [
+            # Player list endpoint: WHERE player_id = $1 ORDER BY created_at DESC
+            models.Index(fields=["player", "-created_at"], name="booking_player_createdat_idx"),
+            # Owner list endpoint: WHERE stadium_id = $1 ORDER BY created_at DESC
+            models.Index(fields=["stadium", "-created_at"], name="booking_stadium_createdat_idx"),
+            # mark_completed_bookings task: WHERE status='confirmed' JOIN slot ON slot_id
+            models.Index(fields=["status", "slot"], name="booking_status_slot_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"Booking({self.pk}) {self.player_id} → slot {self.slot_id} [{self.status}]"

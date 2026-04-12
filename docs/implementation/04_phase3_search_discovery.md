@@ -1,9 +1,23 @@
 # Phase 3 — Search & Discovery
 
-**Duration:** Week 5–6  
+**Duration:** Week 5–6
 **Priority:** P0 (launch blocker)
 
 **Goal:** Players can find stadiums by location, date, sport type, and time.
+
+---
+
+## AI Execution Guide
+
+| Task | Model | Effort | Notes |
+|------|-------|--------|-------|
+| PostGIS query design (`ST_DWithin`, distance annotation, available slot subquery) | `opus-4-6` | Extended thinking | Spatial indexing strategy, subquery vs. JOIN trade-offs, and cache key design all interact — think them through together |
+| Redis caching strategy (key shape, TTL, invalidation triggers) | `opus-4-6` | High | Cache keyed on rounded lat/lng — decide rounding precision vs. cache hit rate trade-off here |
+| Search endpoint implementation | `sonnet-4-6` | High | Wire PostGIS + subquery + Redis from Opus design; enforce all query params and defaults |
+| Stadium detail endpoint | `sonnet-4-6` | Medium | Aggregates reviews, gallery URLs (CDN vs. signed), operating hours |
+| Slots-for-date endpoint | `haiku-4-5` | Low | Simple filter on `Slot` by stadium + date |
+
+> **Run Opus with extended thinking before writing any search SQL/ORM.** The PostGIS + Redis + subquery combination is the only part of this phase that requires architectural judgment. Implementation after the design is decided is Sonnet-level work.
 
 ---
 
@@ -93,6 +107,6 @@ All slot statuses returned for the requested date; client renders `available` on
 
 ## Deliverable
 
-Search returns paginated, distance-sorted stadium results.  
-Stadium detail page shows gallery, slots, and reviews.  
+Search returns paginated, distance-sorted stadium results.
+Stadium detail page shows gallery, slots, and reviews.
 Map view supported via lat/lng in each search result.

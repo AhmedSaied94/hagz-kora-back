@@ -20,6 +20,7 @@ from apps.bookings.services import cancel_booking, create_booking
 from rest_framework import status
 from rest_framework.generics import GenericAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from api.v1.bookings.serializers import BookingSerializer, CreateBookingSerializer
 
@@ -32,6 +33,8 @@ class BookingListCreateView(ListAPIView):
     """
 
     permission_classes = [IsPlayer]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "booking_create"
     serializer_class = BookingSerializer
 
     def get_queryset(self):
@@ -100,6 +103,6 @@ class BookingCancelView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Re-fetch with select_related so the serializer can traverse FK fields.
-        booking_data = Booking.objects.select_related("slot", "stadium").get(pk=booking.pk)
-        return Response(BookingSerializer(booking_data).data, status=status.HTTP_200_OK)
+        # cancel_booking returns the instance with slot + stadium already loaded
+        # via select_related — no second query needed.
+        return Response(BookingSerializer(booking).data, status=status.HTTP_200_OK)
