@@ -157,3 +157,20 @@ class SlotFactory(DjangoModelFactory):
     start_time = datetime.time(10, 0)
     end_time = datetime.time(11, 0)
     status = SlotStatus.AVAILABLE
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — Booking factories
+# ---------------------------------------------------------------------------
+
+
+class BookingFactory(DjangoModelFactory):
+    class Meta:
+        model = "bookings.Booking"
+
+    player = factory.SubFactory(PlayerUserFactory)
+    slot = factory.SubFactory(SlotFactory)
+    stadium = factory.SelfAttribute("slot.stadium")
+    status = "confirmed"
+    price_at_booking = factory.Faker("pydecimal", left_digits=3, right_digits=2, positive=True)
+    deposit_amount = factory.Faker("pydecimal", left_digits=3, right_digits=2, positive=True)
