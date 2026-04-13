@@ -36,36 +36,38 @@ def send_push_to_user(
     from apps.notifications.models import DeviceToken
     from apps.notifications.services.fcm import FCMError, send_push
 
-    try:
-        tokens = DeviceToken.objects.filter(user_id=user_id, is_active=True).values_list(
-            "token", "language"
-        )
+    tokens = list(
+        DeviceToken.objects.filter(user_id=user_id, is_active=True).values_list("token", "language")
+    )
 
-        sent = 0
-        failed = 0
+    sent = 0
+    failed = 0
+    last_transient_exc: FCMError | None = None
 
-        for token, language in tokens:
-            title = title_ar if language == DeviceToken.Language.AR else title_en
-            body = body_ar if language == DeviceToken.Language.AR else body_en
+    for token, language in tokens:
+        title = title_ar if language == DeviceToken.Language.AR else title_en
+        body = body_ar if language == DeviceToken.Language.AR else body_en
 
-            try:
-                success = send_push(token=token, title=title, body=body, data=data)
-                if success:
-                    sent += 1
-                else:
-                    failed += 1
-            except FCMError as exc:
-                logger.warning(f"FCM error sending to token {token}: {exc}")
+        try:
+            success = send_push(token=token, title=title, body=body, data=data)
+            if success:
+                sent += 1
+            else:
+                # Token is dead (UnregisteredError / SenderIdMismatchError) — deactivate it.
+                DeviceToken.objects.filter(token=token).update(is_active=False)
                 failed += 1
-                # Re-raise to trigger retry
-                raise self.retry(exc=exc) from exc
+        except FCMError as exc:
+            logger.warning("FCM error sending to token %s…: %s", token[:20], exc)
+            failed += 1
+            last_transient_exc = exc  # record but finish the loop
 
-        logger.info(f"send_push_to_user(user_id={user_id}): sent={sent}, failed={failed}")
-        return {"sent": sent, "failed": failed}
+    logger.info("send_push_to_user(user_id=%s): sent=%s, failed=%s", user_id, sent, failed)
 
-    except Exception as exc:
-        logger.error(f"send_push_to_user failed: {exc}", exc_info=True)
-        raise self.retry(exc=exc) from exc
+    # Only retry if every token failed due to transient errors (nothing got through).
+    if sent == 0 and last_transient_exc is not None:
+        raise self.retry(exc=last_transient_exc) from last_transient_exc
+
+    return {"sent": sent, "failed": failed}
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60, queue="notifications")
@@ -89,10 +91,11 @@ def send_sms_to_user(self, user_id: int, message_ar: str) -> bool:
 
     try:
         success = send_sms(phone=user.phone, message=message_ar)
-        logger.info(f"send_sms_to_user(user_id={user_id}, phone={user.phone}): success={success}")
+        logger.info("send_sms_to_user(user_id=%s): success=%s", user_id, success)
         return success
     except SMSError as exc:
-        logger.warning(f"SMS error sending to {user.phone}: {exc}")
+        masked = f"{user.phone[:3]}****{user.phone[-2:]}" if user.phone else "unknown"
+        logger.warning("SMS error sending to %s: %s", masked, exc)
         raise self.retry(exc=exc) from exc
 
 
@@ -285,8 +288,9 @@ def notify_stadium_rejected(self, stadium_id: int) -> None:
 
     title_ar = "تم رفض ملعبك"
     title_en = "Stadium Rejected"
-    body_ar = f"تم رفض {stadium.name_ar}. السبب: {stadium.rejection_note}"
-    body_en = f"{stadium.name_en} was rejected. Reason: {stadium.rejection_note}"
+    note = (stadium.rejection_note or "")[:160]
+    body_ar = f"تم رفض {stadium.name_ar}. السبب: {note}"
+    body_en = f"{stadium.name_en} was rejected. Reason: {note}"
 
     send_push_to_user.delay(
         user_id=owner.id,

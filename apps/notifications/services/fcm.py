@@ -59,11 +59,21 @@ def send_push(
     from firebase_admin import messaging
     from firebase_admin.exceptions import FirebaseError
 
+    # FCM requires all data dict values to be strings — enforce at the boundary.
+    safe_data: dict[str, str] = {}
+    if data:
+        for k, v in data.items():
+            if not isinstance(k, str) or not isinstance(v, str):
+                raise FCMError(
+                    f"FCM data dict must contain only str keys and str values; got {k!r}={v!r}"
+                )
+            safe_data[k] = v
+
     notification = messaging.Notification(title=title, body=body)
     message = messaging.Message(
         notification=notification,
         token=token,
-        data=data or {},
+        data=safe_data,
     )
 
     try:
@@ -107,11 +117,21 @@ def send_push_multicast(
     from firebase_admin import messaging
     from firebase_admin.exceptions import FirebaseError
 
+    # FCM requires all data dict values to be strings — enforce at the boundary.
+    safe_data: dict[str, str] = {}
+    if data:
+        for k, v in data.items():
+            if not isinstance(k, str) or not isinstance(v, str):
+                raise FCMError(
+                    f"FCM data dict must contain only str keys and str values; got {k!r}={v!r}"
+                )
+            safe_data[k] = v
+
     notification = messaging.Notification(title=title, body=body)
     multicast_message = messaging.MulticastMessage(
         notification=notification,
         tokens=tokens,
-        data=data or {},
+        data=safe_data,
     )
 
     try:
