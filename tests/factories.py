@@ -175,3 +175,72 @@ class BookingFactory(DjangoModelFactory):
     status = "confirmed"
     price_at_booking = factory.Faker("pydecimal", left_digits=3, right_digits=2, positive=True)
     deposit_amount = factory.Faker("pydecimal", left_digits=3, right_digits=2, positive=True)
+
+
+# ---------------------------------------------------------------------------
+# Phase 6 — Tournament factories
+# ---------------------------------------------------------------------------
+
+from apps.tournaments.models import (
+    Fixture,
+    FixtureStage,
+    FixtureStatus,
+    Tournament,
+    TournamentFormat,
+    TournamentPlayer,
+    TournamentStatus,
+    TournamentTeam,
+)
+
+
+class TournamentFactory(DjangoModelFactory):
+    class Meta:
+        model = Tournament
+
+    organizer = factory.SubFactory(OwnerUserFactory)
+    name = factory.Sequence(lambda n: f"Tournament {n}")
+    format = TournamentFormat.ROUND_ROBIN
+    max_teams = 8
+    registration_deadline = factory.LazyFunction(
+        lambda: datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=7)
+    )
+    start_date = factory.LazyFunction(
+        lambda: (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=14)).date()
+    )
+    status = TournamentStatus.DRAFT
+    public_slug = factory.Sequence(lambda n: f"tournament-{n}")
+
+    class Params:
+        open = factory.Trait(status=TournamentStatus.REGISTRATION_OPEN)
+        in_progress = factory.Trait(status=TournamentStatus.IN_PROGRESS)
+
+
+class TournamentTeamFactory(DjangoModelFactory):
+    class Meta:
+        model = TournamentTeam
+
+    tournament = factory.SubFactory(TournamentFactory)
+    name = factory.Sequence(lambda n: f"Team {n}")
+    captain = factory.SubFactory(PlayerUserFactory)
+    join_code = factory.Sequence(lambda n: f"CODE{n:04d}")
+
+
+class TournamentPlayerFactory(DjangoModelFactory):
+    class Meta:
+        model = TournamentPlayer
+
+    team = factory.SubFactory(TournamentTeamFactory)
+    player = factory.SubFactory(PlayerUserFactory)
+
+
+class FixtureFactory(DjangoModelFactory):
+    class Meta:
+        model = Fixture
+
+    tournament = factory.SubFactory(TournamentFactory)
+    home_team = factory.SubFactory(TournamentTeamFactory)
+    away_team = factory.SubFactory(TournamentTeamFactory)
+    round_number = 1
+    status = FixtureStatus.SCHEDULED
+    stage = FixtureStage.KNOCKOUT
+    is_bye = False
