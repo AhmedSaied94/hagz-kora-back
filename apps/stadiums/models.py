@@ -58,6 +58,8 @@ class Stadium(TimeStampedModel):
         db_index=True,
     )
     rejection_note = models.TextField(blank=True)
+    avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0, db_index=True)
+    review_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "stadium"
