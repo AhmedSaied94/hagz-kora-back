@@ -9,7 +9,7 @@ from rest_framework import serializers
 class DeviceTokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeviceToken
-        fields: ClassVar[list[str]] = ["token", "platform"]
+        fields: ClassVar[list[str]] = ["token", "platform", "language"]
         # Strip the auto-added UniqueValidator so duplicate tokens reach create()
         # and are handled by the upsert logic there.
         extra_kwargs: ClassVar[dict] = {"token": {"validators": []}}
