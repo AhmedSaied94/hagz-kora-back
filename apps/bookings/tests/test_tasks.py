@@ -7,11 +7,10 @@ from unittest.mock import patch
 
 import pytest
 from django.utils import timezone
-
-from apps.bookings.models import Booking, BookingStatus
-from apps.bookings.tasks import mark_completed_bookings
 from tests.factories import BookingFactory, SlotFactory
 
+from apps.bookings.models import BookingStatus
+from apps.bookings.tasks import mark_completed_bookings
 
 # ---------------------------------------------------------------------------
 # Helpers

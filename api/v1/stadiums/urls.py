@@ -6,6 +6,7 @@ Mounted at /api/v1/stadiums/ via api/v1/urls.py.
 
 from django.urls import path
 
+from api.v1.reviews.views import StadiumReviewListView
 from api.v1.stadiums.views import (
     OperatingHoursView,
     ReorderPhotosView,
@@ -40,4 +41,5 @@ urlpatterns = [
         name="stadium-photos-reorder",
     ),
     path("<int:stadium_id>/photos/<int:photo_id>/", photo_detail, name="stadium-photo-detail"),
+    path("<int:stadium_pk>/reviews/", StadiumReviewListView.as_view(), name="stadium-reviews-list"),
 ]

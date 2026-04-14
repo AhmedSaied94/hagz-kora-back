@@ -202,10 +202,10 @@ class TournamentFactory(DjangoModelFactory):
     format = TournamentFormat.ROUND_ROBIN
     max_teams = 8
     registration_deadline = factory.LazyFunction(
-        lambda: datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=7)
+        lambda: datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=7)
     )
     start_date = factory.LazyFunction(
-        lambda: (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=14)).date()
+        lambda: (datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=14)).date()
     )
     status = TournamentStatus.DRAFT
     public_slug = factory.Sequence(lambda n: f"tournament-{n}")
@@ -244,3 +244,21 @@ class FixtureFactory(DjangoModelFactory):
     status = FixtureStatus.SCHEDULED
     stage = FixtureStage.KNOCKOUT
     is_bye = False
+
+
+# ---------------------------------------------------------------------------
+# Phase 7 — Review factories
+# ---------------------------------------------------------------------------
+
+from apps.reviews.models import Review
+
+
+class ReviewFactory(DjangoModelFactory):
+    class Meta:
+        model = Review
+
+    booking = factory.SubFactory(BookingFactory)
+    player = factory.SelfAttribute("booking.player")
+    stadium = factory.SelfAttribute("booking.stadium")
+    overall_rating = 4
+    text = factory.Faker("sentence")

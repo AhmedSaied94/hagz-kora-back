@@ -15,11 +15,10 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
-
-from apps.bookings.models import Booking, BookingStatus
-from apps.stadiums.models import Slot, SlotStatus
 from tests.factories import BookingFactory, PlayerUserFactory, SlotFactory
 
+from apps.bookings.models import BookingStatus
+from apps.stadiums.models import Slot, SlotStatus
 
 # ---------------------------------------------------------------------------
 # Helpers

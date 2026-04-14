@@ -173,13 +173,29 @@ class StadiumSerializer(serializers.ModelSerializer):
             "amenities",
             "status",
             "rejection_note",
+            "avg_rating",
+            "review_count",
             "photos",
             "operating_hours",
             "cover_photo_url",
+            "avg_pitch_quality",
+            "avg_facilities",
+            "avg_value_for_money",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "status", "rejection_note", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "status",
+            "rejection_note",
+            "avg_rating",
+            "review_count",
+            "avg_pitch_quality",
+            "avg_facilities",
+            "avg_value_for_money",
+            "created_at",
+            "updated_at",
+        ]
 
     def get_cover_photo_url(self, obj: Stadium) -> str | None:
         # Use the prefetch cache — do NOT call .filter() which bypasses it and causes N+1.
@@ -213,9 +229,12 @@ class StadiumListSerializer(serializers.ModelSerializer):
             "city",
             "price_per_slot",
             "status",
+            "avg_rating",
+            "review_count",
             "cover_photo_url",
             "created_at",
         ]
+        read_only_fields = ["avg_rating", "review_count"]
 
     def get_cover_photo_url(self, obj: Stadium) -> str | None:
         # Use the prefetch cache — do NOT call .filter() which bypasses it and causes N+1.

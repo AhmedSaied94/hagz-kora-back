@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Shared mock error classes (reused across both FCM and SMS test classes)
 # ---------------------------------------------------------------------------

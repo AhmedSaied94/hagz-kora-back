@@ -5,13 +5,13 @@ Integration tests for tournament CRUD and lifecycle (owner endpoints).
 import pytest
 from django.urls import reverse
 from rest_framework import status
-
-from apps.tournaments.models import Tournament, TournamentStatus
 from tests.factories import (
     OwnerUserFactory,
     TournamentFactory,
     TournamentTeamFactory,
 )
+
+from apps.tournaments.models import TournamentStatus
 
 
 @pytest.mark.integration
