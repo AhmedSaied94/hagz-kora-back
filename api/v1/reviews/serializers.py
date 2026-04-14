@@ -55,6 +55,8 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
 class OwnerResponseSerializer(serializers.ModelSerializer):
     """Write serializer used when an owner responds to a review."""
 
+    owner_response = serializers.CharField(max_length=1000)
+
     class Meta:
         model = Review
         fields = ["owner_response"]
@@ -63,3 +65,8 @@ class OwnerResponseSerializer(serializers.ModelSerializer):
         if not value.strip():
             raise serializers.ValidationError("Owner response cannot be blank.")
         return value
+
+    def update(self, instance, validated_data):
+        instance.owner_response = validated_data["owner_response"]
+        instance.save(update_fields=["owner_response", "updated_at"])
+        return instance

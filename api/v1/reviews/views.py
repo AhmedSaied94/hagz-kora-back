@@ -5,11 +5,13 @@ from __future__ import annotations
 from apps.auth_users.permissions import IsOwner, IsPlayer
 from apps.bookings.models import Booking, BookingStatus
 from apps.reviews.models import Review
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 
 from api.v1.reviews.serializers import (
     OwnerResponseSerializer,
@@ -47,23 +49,34 @@ class SubmitReviewView(generics.CreateAPIView):
                 {"detail": "A review has already been submitted for this booking."}
             )
 
-        serializer.save(
-            booking=booking,
-            player=self.request.user,
-            stadium=booking.stadium,
-        )
+        # Wrap in atomic + catch IntegrityError so a concurrent duplicate request
+        # returns a clean 400 instead of an unhandled 500 (DB unique constraint).
+        try:
+            with transaction.atomic():
+                serializer.save(
+                    booking=booking,
+                    player=self.request.user,
+                    stadium=booking.stadium,
+                )
+        except IntegrityError:
+            raise ValidationError(
+                {"detail": "A review has already been submitted for this booking."}
+            ) from None
 
     def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        # Re-serialize with full read serializer for the 201 response body
-        booking_pk = self.kwargs["booking_pk"]
-        booking = get_object_or_404(
-            Booking.objects.select_related("player", "stadium"),
-            pk=booking_pk,
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        # Re-serialize with full ReviewSerializer; use saved instance pk — no second booking fetch.
+        review = Review.objects.select_related("player", "stadium", "booking").get(
+            pk=serializer.instance.pk
         )
-        review = Review.objects.select_related("player", "stadium", "booking").get(booking=booking)
-        response.data = ReviewSerializer(review).data
-        return response
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            ReviewSerializer(review).data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
 
 class StadiumReviewListView(generics.ListAPIView):
@@ -75,6 +88,7 @@ class StadiumReviewListView(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer_class = ReviewSerializer
     pagination_class = PageNumberPagination
+    queryset = Review.objects.none()  # overridden by get_queryset; satisfies drf-spectacular
 
     def get_queryset(self):
         stadium_pk = self.kwargs["stadium_pk"]
@@ -100,20 +114,19 @@ class OwnerRespondView(generics.UpdateAPIView):
         return Review.objects.filter(stadium_id=stadium_pk).select_related("stadium__owner")
 
     def perform_update(self, serializer: OwnerResponseSerializer) -> None:
-        instance = serializer.instance
-        if instance.stadium.owner != self.request.user:
+        if serializer.instance.stadium.owner != self.request.user:
             raise PermissionDenied("You do not own this stadium.")
-        instance.owner_response = serializer.validated_data["owner_response"]
-        instance.save(update_fields=["owner_response", "updated_at"])
+        serializer.save()
 
     def post(self, request, *args, **kwargs):
         """Route POST to the same partial-update handler as PATCH."""
         return self.partial_update(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
-        # Allow POST to behave like PATCH (partial update)
-        kwargs["partial"] = True
-        response = super().update(request, *args, **kwargs)
-        review = self.get_object()
-        response.data = ReviewSerializer(review).data
-        return response
+        # Inline partial update to keep a single get_object() call and return
+        # the full ReviewSerializer representation in the response.
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(ReviewSerializer(serializer.instance).data)

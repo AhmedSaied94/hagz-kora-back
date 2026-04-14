@@ -10,11 +10,27 @@ from apps.reviews.models import Review
 
 def _update_stadium_rating(stadium) -> None:
     agg = Review.objects.filter(stadium=stadium).aggregate(
-        avg=Avg("overall_rating"), count=models.Count("id")
+        avg=Avg("overall_rating"),
+        count=models.Count("id"),
+        pitch=Avg("pitch_quality"),
+        facilities=Avg("facilities"),
+        value=Avg("value_for_money"),
     )
     stadium.avg_rating = agg["avg"] or 0
     stadium.review_count = agg["count"]
-    stadium.save(update_fields=["avg_rating", "review_count", "updated_at"])
+    stadium.avg_pitch_quality = agg["pitch"]
+    stadium.avg_facilities = agg["facilities"]
+    stadium.avg_value_for_money = agg["value"]
+    stadium.save(
+        update_fields=[
+            "avg_rating",
+            "review_count",
+            "avg_pitch_quality",
+            "avg_facilities",
+            "avg_value_for_money",
+            "updated_at",
+        ]
+    )
 
 
 @receiver(post_save, sender=Review)

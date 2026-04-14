@@ -13,14 +13,12 @@ Sections:
 
 from __future__ import annotations
 
-from apps.reviews.models import Review
 from apps.stadiums.models import (
     OperatingHour,
     Slot,
     Stadium,
     StadiumPhoto,
 )
-from django.db.models import Avg
 from rest_framework import serializers
 
 # ---------------------------------------------------------------------------
@@ -154,9 +152,6 @@ class StadiumSerializer(serializers.ModelSerializer):
     photos = StadiumPhotoSerializer(many=True, read_only=True)
     operating_hours = OperatingHourSerializer(many=True, read_only=True)
     cover_photo_url = serializers.SerializerMethodField()
-    avg_pitch_quality = serializers.SerializerMethodField()
-    avg_facilities = serializers.SerializerMethodField()
-    avg_value_for_money = serializers.SerializerMethodField()
 
     class Meta:
         model = Stadium
@@ -217,15 +212,6 @@ class StadiumSerializer(serializers.ModelSerializer):
         if value is not None and value.srid != 4326:
             raise serializers.ValidationError("Location must use WGS84 (EPSG:4326).")
         return value
-
-    def get_avg_pitch_quality(self, obj: Stadium) -> float | None:
-        return Review.objects.filter(stadium=obj).aggregate(v=Avg("pitch_quality"))["v"]
-
-    def get_avg_facilities(self, obj: Stadium) -> float | None:
-        return Review.objects.filter(stadium=obj).aggregate(v=Avg("facilities"))["v"]
-
-    def get_avg_value_for_money(self, obj: Stadium) -> float | None:
-        return Review.objects.filter(stadium=obj).aggregate(v=Avg("value_for_money"))["v"]
 
 
 class StadiumListSerializer(serializers.ModelSerializer):

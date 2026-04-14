@@ -9,21 +9,18 @@ Verifies:
 """
 
 import pytest
-
-from apps.tournaments.models import (
-    Fixture,
-    FixtureStage,
-    FixtureStatus,
-    Tournament,
-    TournamentFormat,
-    TournamentTeam,
-)
-from apps.tournaments.services.standings import StandingRow, compute_standings
 from tests.factories import (
     FixtureFactory,
     TournamentFactory,
     TournamentTeamFactory,
 )
+
+from apps.tournaments.models import (
+    FixtureStage,
+    FixtureStatus,
+    TournamentFormat,
+)
+from apps.tournaments.services.standings import compute_standings
 
 
 def _completed(tournament, home_team, away_team, home_score, away_score, **kwargs):

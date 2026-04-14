@@ -8,10 +8,9 @@ Tests each format with known inputs (N=3,4,5,6,7,8) and verifies:
   - Bye fixtures have is_bye=True and away_team=None
 """
 
-import datetime
 
 import pytest
-from django.utils import timezone
+from tests.factories import TournamentFactory, TournamentTeamFactory
 
 from apps.tournaments.models import (
     Fixture,
@@ -28,8 +27,6 @@ from apps.tournaments.services.fixture_generator import (
     generate_fixtures,
     validate_team_count,
 )
-from tests.factories import OwnerUserFactory, TournamentFactory, TournamentTeamFactory
-
 
 # ---------------------------------------------------------------------------
 # Helpers
